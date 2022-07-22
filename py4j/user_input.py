@@ -27,6 +27,98 @@ sample.append([19, 18, "NUM", 16])
 for x in sample:
     print(x)"""
 
+android_actions = """ CREATE TABLE IF NOT EXISTS android_actions 
+                                    (Size INT     NOT NULL,
+                                    Length INT      NOT NULL,
+                                    Occurrence  INT      NOT NULL,
+                                    Name   TEXT    NOT NULL,
+                                    Category            TEXT     NOT NULL);"""
+
+android_words = """ CREATE TABLE IF NOT EXISTS android_words
+                                    (Size INT     NOT NULL,
+                                    Length INT      NOT NULL,
+                                    Occurrence  INT      NOT NULL,
+                                    Name   TEXT    NOT NULL,
+                                    Category            TEXT     NOT NULL);"""
+
+global_locations = """ CREATE TABLE IF NOT EXISTS global_locations
+                                    (Size INT     NOT NULL,
+                                    Length INT      NOT NULL,
+                                    Occurrence  INT      NOT NULL,
+                                    Name   TEXT    NOT NULL,
+                                    Category            TEXT     NOT NULL);"""
+
+adverb_table = """ CREATE TABLE IF NOT EXISTS adverb_table
+                                    (Size INT     NOT NULL,
+                                    Length INT      NOT NULL,
+                                    Occurrence  INT      NOT NULL,
+                                    Name   TEXT    NOT NULL,
+                                    Category            TEXT     NOT NULL);"""
+
+questions_tenses = """ CREATE TABLE IF NOT EXISTS questions_tenses
+                                    (Size INT     NOT NULL,
+                                    Length INT      NOT NULL,
+                                    Occurrence  INT      NOT NULL,
+                                    Name   TEXT    NOT NULL,
+                                    Category            TEXT     NOT NULL);"""
+
+businesses = """ CREATE TABLE IF NOT EXISTS businesses
+                                    (Size INT     NOT NULL,
+                                    Length INT      NOT NULL,
+                                    Occurrence  INT      NOT NULL,
+                                    Name   TEXT    NOT NULL,
+                                    Category            TEXT     NOT NULL,
+                                    Address        TEXT      NOT NULL,
+                                    Updated_date         TEXT NOT NULL);"""
+
+business_supplies = """ CREATE TABLE IF NOT EXISTS business_supplies
+                                    (Size INT     NOT NULL,
+                                    Length INT     NOT NULL,
+                                    Occurrence  INT      NOT NULL,
+                                    Name   TEXT    NOT NULL,
+                                    Category            TEXT     NOT NULL,
+                                    Brand         TEXT NOT NULL,
+                                    Updated_date         TEXT NOT NULL);"""
+
+business_actions = """ CREATE TABLE IF NOT EXISTS business_actions
+                                    (Size INT     NOT NULL,
+                                    Length INT      NOT NULL,
+                                    Occurrence  INT      NOT NULL,
+                                    Name   TEXT    NOT NULL,
+                                    Category            TEXT     NOT NULL,
+                                    Brand         TEXT NOT NULL,
+                                    Updated_date         TEXT NOT NULL);"""
+
+available_supplies = """ CREATE TABLE IF NOT EXISTS available_supplies
+                                    (Size INT     NOT NULL,
+                                    Length INT      NOT NULL,
+                                    Occurrence  INT      NOT NULL,
+                                    Name   TEXT    NOT NULL,
+                                    Category            TEXT     NOT NULL,
+                                    Brand         TEXT NOT NULL,
+                                    Available_stores         TEXT NOT NULL,
+                                    Updated_date         TEXT NOT NULL);"""
+
+supply_add_ons = """ CREATE TABLE IF NOT EXISTS supply_add_ons
+                                    (Size INT     NOT NULL,
+                                    Length INT      NOT NULL,
+                                    Occurrence  INT      NOT NULL,
+                                    Name   TEXT    NOT NULL,
+                                    Category            TEXT     NOT NULL,
+                                    Brand         TEXT NOT NULL,
+                                    Available_stores         TEXT NOT NULL,
+                                    Updated_date         TEXT NOT NULL);"""
+
+supply_descriptions = """ CREATE TABLE IF NOT EXISTS supply_descriptions
+                                    (Size INT     NOT NULL,
+                                    Length INT      NOT NULL,
+                                    Occurrence  INT      NOT NULL,
+                                    Name   TEXT    NOT NULL,
+                                    Category            TEXT     NOT NULL,
+                                    Brand         TEXT NOT NULL,
+                                    Available_stores         TEXT NOT NULL,
+                                    Updated_date         TEXT NOT NULL);"""
+
 g_a_obj = None
 g_r_obj = None
 
@@ -49,7 +141,7 @@ data_read = Value('i', 0)
 files_accessed = Value('i', 0)
 
 logging.basicConfig(level=logging.DEBUG)
-
+logging.getLogger("py4j").setLevel(logging.INFO)
 g_db_obj = user_database.ProcessDataBaseRequests()
 
 
@@ -142,8 +234,11 @@ class ProcessUserInput:
             ret_t.start()
             and_t.join()
             ret_t.join()
+            print(f"queue size: {q_t._qsize()}")
             ret_and = q_t.get()
             ret_ret = q_t.get()
+            print(f"and: {ret_and}")
+            print(f"ret: {ret_ret}")
             if ret_and != enums.SUCCESS.name:
                 logging.debug("User intention is not a android action")
             elif ret_ret != enums.SUCCESS.name:
@@ -171,22 +266,25 @@ class ProcessUserInput:
                 m_lock1.acquire()
                 at.join()
                 m_lock1.release()
+                return 1
             elif type_ == "video":
                 vt = Process(target=self.start_security_decode, args=(_input,), name="Video")
                 vt.start()
                 m_lock2.acquire()
                 vt.join()
                 m_lock2.release()
+                return 1
             elif type_ == "text":
                 tt = Process(target=self.decode_user_input, args=(_input,), name="Text")
                 tt.start()
                 m_lock3.acquire()
                 tt.join()
                 m_lock3.release()
+                return 1
             else:
                 for p in multiprocessing.active_children():
                     p.join()
-            return 0
+                return 0
         except Exception as e:
             raise SpeechInvalidArgumentError(e)
 
@@ -272,6 +370,7 @@ class ProcessUserInput:
 
     def update_local_data_base(self, db_file):
         try:
+            g_db_obj.create_connection()
             if self.read_input_db_file(db_file) == enums.FATAL_ERROR.name:
                 return enums.FATAL_ERROR.name
             global table_names, android_input_data, business_input_data, supplies_input_data, data_tag
@@ -316,6 +415,7 @@ class ProcessUserInput:
     @staticmethod
     def create_local_data_base(table_name):
         try:
+            g_db_obj.create_connection()
             res = enums.FAILURE.name
             for table in table_name:
                 res = g_db_obj.create_table(eval(table))

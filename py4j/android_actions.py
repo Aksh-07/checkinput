@@ -13,7 +13,6 @@ location = "hillsboro"
 
 g_db_obj = user_database.ProcessDataBaseRequests()
 
-
 class AndroidActions:
     def __init__(self, text_input):
         self.data = text_input
@@ -101,6 +100,8 @@ class AndroidActions:
                             q_t.put(enums.INVALID_INPUT.name)
                         else:
                             q_t.put(enums.SUCCESS.name)
+            
+            # print(f"qzise in android action : {q_t.qsize()}")
         except Exception as e:
             raise SpeechProcessError(e)
 

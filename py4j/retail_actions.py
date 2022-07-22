@@ -6,6 +6,7 @@ import logging
 import json
 from datetime import datetime"""
 import logging
+import sqlite3
 from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError, SpeechInvalidArgumentError
 import user_database
@@ -25,7 +26,6 @@ action_type = ""
 location = "hillsboro"
 
 g_db_obj = user_database.ProcessDataBaseRequests()
-
 
 class RetailActions:
     def __init__(self, text_input):
@@ -164,7 +164,11 @@ class RetailActions:
         try:
             global business_name
             if business_name is not None:
-                self.get_retail_db_words(business_name.decode("utf_8")+"_supplies", index)
+                try:
+                    self.get_retail_db_words(business_name.decode("utf_8")+"_supplies", index)
+                except sqlite3.OperationalError as e:
+                    raise e
+                    
             else:
                 self.get_retail_db_words("Available_supplies", index)
             if not self.words:
@@ -201,6 +205,10 @@ class RetailActions:
             add_ons = self.check_add_ons_need(index)
             if add_ons is not None:
                 self.words.clear()
+            if not self.words:
+                return enums.SUCCESS.name
+            else:
+                enums.FAILURE.name
         except Exception as e:
             raise SpeechProcessError(e)
 
@@ -233,6 +241,8 @@ class RetailActions:
                             q_t.put(enums.FAILURE.name)
                     else:
                         q_t.put(enums.FAILURE.name)
+
+            # print(f"retail action queue: {q_t.get()}")            
         except Exception as e:
             raise SpeechProcessError(e)
 

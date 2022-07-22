@@ -1,3 +1,4 @@
+import logging
 import sqlite3
 from sqlite3 import Error
 from speech_errors import SpeechResult as enums
@@ -38,7 +39,8 @@ class ProcessDataBaseRequests:
     def create_connection(self):
         try:
             if self.conn is None:
-                self.conn = sqlite3.connect(database, detect_types=sqlite3.PARSE_DECLTYPES)
+                self.conn = sqlite3.connect(database, detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
+                logging.debug("connection created")
         except Error as e:
             raise SpeechProcessError(e)
 
@@ -51,10 +53,11 @@ class ProcessDataBaseRequests:
         except Error as e:
             raise SpeechProcessError(e)
 
-    def delete_table(self):
+    def delete_table(self, table_name):
         try:
             c = self.conn.cursor()
-            c.execute("DROP TABLE android_actions")
+            qstr = "DROP TABLE {0}".format(table_name)
+            c.execute(qstr)
             self.conn.commit()
             return enums.SUCCESS.name
         except Error as e:
