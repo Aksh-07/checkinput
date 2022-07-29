@@ -201,7 +201,10 @@ class ProcessUserInput:
             str: FAILURE
         """
         try:
-            if self.g_py_obj.request_user_input_from_java(input_need):
+            que1=queue.Queue()
+            t1=Thread(target=self.g_py_obj.request_user_input_from_java,args=(input_need,que1,))
+            t1.start()
+            if que1.get():
                 return enums.FAILURE.name
             return enums.SUCCESS.name
         except Exception as e:
@@ -221,7 +224,10 @@ class ProcessUserInput:
             str: FAILURE
         """
         try:
-            if self.g_py_obj.update_new_words_to_analysis(input_need):
+            que2=queue.Queue()
+            t2=Thread(target=self.g_py_obj.update_new_words_to_analysis,args=(input_need,que2))
+            t2.start()
+            if que2.get():
                 return enums.FAILURE.name
             return enums.SUCCESS.name
         except Exception as e:
@@ -301,17 +307,19 @@ class ProcessUserInput:
                 logging.debug("User intention is not a android action")
             elif ret_ret != enums.SUCCESS.name:
                 logging.debug("User intention is not a retail action")
-            elif ret_and == enums.SUCCESS.name:
+            if ret_and == enums.SUCCESS.name:
                 logging.debug("User intention is a android action")
-                self.g_py_obj.process_user_intention_actions(g_a_obj.generate_android_action_request())
+                t3=Thread(target=self.g_py_obj.process_user_intention_actions,args=(g_a_obj.generate_android_action_request(),))
+                t3.start() 
                 return enums.SUCCESS.name
             elif ret_ret == enums.SUCCESS.name:
                 logging.debug("User intention is a retail action")
-                self.g_py_obj.process_user_intention_actions(g_r_obj.generate_retail_action_request())
+                t4=Thread(target=self.g_py_obj.process_user_intention_actions,args=(g_r_obj.generate_retail_action_request(),))
+                t4.start()
                 return enums.SUCCESS.name
             else:
                 logging.debug("Unable to process user input")
-                self.update_user_input_to_cloud(words)
+                self.update_user_input_to_cloud(_string)
             return enums.INVALID_INPUT.name
         except Exception as e:
             raise SpeechProcessError(e)
@@ -543,5 +551,4 @@ class ProcessUserInput:
             return res
         except Exception as e:
             raise SpeechProcessError(e)
-
 

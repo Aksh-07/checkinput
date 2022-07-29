@@ -193,4 +193,3 @@ class ProcessDataBaseRequests:
 
         except Error as e:
             raise SpeechProcessError(e)
-

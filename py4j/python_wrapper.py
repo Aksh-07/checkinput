@@ -165,7 +165,7 @@ class PythonJavaBridge(object):
             raise SpeechInvalidArgumentError(e)
 
     @staticmethod
-    def request_user_input_from_java(incomplete_input: list):
+    def request_user_input_from_java(incomplete_input: list,que1):
         """send incomplete_input to java side functions
 
         Args:
@@ -182,13 +182,13 @@ class PythonJavaBridge(object):
             result = speech_process.fill_data_for_speech_request(incomplete_input)
             if result is None:
                 logging.error("Failed to get requested input")
-                return enums.FAILURE.name
-            return enums.SUCCESS.name
+                que1.put( enums.FAILURE.name)
+            que1.put(enums.SUCCESS.name)
         except Exception as e:
             raise SpeechProcessError(e)
 
     @staticmethod
-    def update_new_words_to_analysis(new_user_words: list):
+    def update_new_words_to_analysis(new_user_words: list,que2):
         """send the new word to java functions for update and analysis
 
         Args:
@@ -205,8 +205,8 @@ class PythonJavaBridge(object):
             result = speech_process.update_new_words_cloud(new_user_words)
             if result:
                 logging.error("Failed to get requested input")
-                return enums.FAILURE.name
-            return enums.SUCCESS.name
+                que2.put( enums.FAILURE.name)
+            que2.put(enums.SUCCESS.name)
         except Exception as e:
             raise SpeechProcessError(e)
 
