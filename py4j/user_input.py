@@ -319,7 +319,7 @@ class ProcessUserInput:
                 return enums.SUCCESS.name
             else:
                 logging.debug("Unable to process user input")
-                self.update_user_input_to_cloud(_string)
+                self.update_user_input_to_cloud(list(_string))
             return enums.INVALID_INPUT.name
         except Exception as e:
             raise SpeechProcessError(e)

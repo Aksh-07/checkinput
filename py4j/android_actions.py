@@ -203,7 +203,7 @@ class AndroidActions:
                     elif is_android_action.decode('utf_8') == "weather":
                         query_type = "show"
                         action_type = "android_action"
-                        if self.get_location_for_weather_report(word_lst, index):
+                        if self.get_location_for_weather_report(word_lst, index) == enums.SUCCESS.name:
                             logging.debug("This is an " + action_type + " of intention to " + query_type + " " +
                                       item_list[0])
                             return enums.SERVICE_NOT_AVAILABLE.name
@@ -286,20 +286,20 @@ class AndroidActions:
             global location
             current_location = location
             self.get_android_db_words("Global_locations", index)
-            if not words:
+            if index == 1:
                 item_list.append(current_location + " " + "weather")
                 return enums.SUCCESS.name
-            elif words:
-                location = words[0]
-                if current_location != location:
-                    item_list.append(location.decode('utf_8') + " " + "weather")
-                    return enums.SUCCESS.name
-                else:
-                    item_list.append(current_location + " " + "weather")
-                    return enums.SUCCESS.name
-            else:
+            elif not self.words:
                 logging.error("The location you are interested is not under countries we provide our services")
                 return enums.INVALID_LOCATION.name
+                # location = self.words[0]
+                # item_list.append(location.decode('utf_8') + " " + "weather")
+            elif self.words:
+                location = self.words[0]
+                item_list.append(location.decode('utf_8') + " " + "weather")
+                return enums.SUCCESS.name
+                # logging.error("The location you are interested is not under countries we provide our services")
+                # return enums.INVALID_LOCATION.name
         except Exception as e:
             raise SpeechProcessError(e)
 
