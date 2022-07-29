@@ -6,7 +6,9 @@ import logging
 import json
 from datetime import datetime"""
 import logging
-import sqlite3
+import queue
+
+from numpy import array
 from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError, SpeechInvalidArgumentError
 import user_database
@@ -28,7 +30,13 @@ location = "hillsboro"
 g_db_obj = user_database.ProcessDataBaseRequests()
 
 class RetailActions:
-    def __init__(self, text_input):
+    def __init__(self, text_input: array):
+        """stores parameter text_input into self.data, creates an empty list with name self.words,
+        initiates self.user_input_data_obj() with variable name self.g_ui_obj, and creates an object of user_database.creates_connection()
+
+        Args:
+            text_input (array): array from function convert_strings_to_num_array(strings)
+        """
         self.data = text_input
         self.words = []
         self.g_ui_obj = self.user_input_data_obj()
@@ -39,16 +47,47 @@ class RetailActions:
 
     @staticmethod
     def user_input_data_obj():
+        """creates an object of ProcessUserInput() class from user_input module
+
+        Returns:
+            object: object of user_input.ProcessUserInput() class
+        """
         return user_input.ProcessUserInput()
 
     @staticmethod
-    def compare_input_string(string_input, compare_string):
+    def compare_input_string(string_input: str, compare_string: str):
+        """compare the user input string with the one fetched from databse
+
+        Args:
+            string_input (str): string fetched from database.
+            compare_string (str): string entered by user.
+
+        Returns:
+            Boolean: TRUE - if string_input is same as compare_string
+                     FALSE - if string_input is not same as compare_string
+        """
         for i in range(len(string_input)):
             if string_input[i] != compare_string[i]:
                 return False
         return True
 
-    def get_retail_db_words(self, table, index):
+    def get_retail_db_words(self, table: str, index: int):
+        """Fetch all the rows from given table with the given index then find the one that match the user input and stores 
+        the string in self.words
+
+
+        Args:
+            table (str): table name to search and get data from.
+
+            index (int): length of the array created by convert_strings_to_num_array(strings)
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            bytes: r[3] if there is only one word in user input, 4th item of row is fetched from database which is a string converted into bytes.
+            NONE: if there is no matching data found in database or there are more than one words in user input.
+        """
         try:
             if index == 1:
                 rows = g_db_obj.fetch_db_data(table, self.data[0][0])
@@ -73,7 +112,16 @@ class RetailActions:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def validate_user_input(self, index):
+    def validate_user_input(self, index: int):
+        """check self.is_input_incomplete() and puts the item returned in a new list
+
+        Args:
+            index (int): length of the array created by convert_strings_to_num_array(strings)
+
+        Returns:
+            NONE: NONE
+            word: a list
+        """
         incomplete = self.is_input_incomplete(index)
         word = []
         if incomplete is not None:
@@ -82,12 +130,21 @@ class RetailActions:
             return word
         return None
 
-    def is_input_incomplete(self, index):
+    def is_input_incomplete(self, index: int):
+        """fill in details like query_type, business_name, item_list if they are none
+
+        Args:
+            index (int): length of the array created by convert_strings_to_num_array(strings)
+
+        Returns:
+            NONE: if result list is empty
+            result: if result is not empty
+        """
         global query_type, business_name, item_list, add_ons, description
         result = []
-        if query_type is None:
+        if not query_type:
             result.append("query_type")
-        if business_name is None:
+        if not business_name:
             result.append("business_name")
         if not item_list:
             result.append("item_list")
@@ -96,11 +153,24 @@ class RetailActions:
                 result.append("add_ons")
             if self.check_description_need(index):
                 result.append("description")
-        if not result:
+        if result:
             return result
         return None
 
-    def check_add_ons_need(self, index):
+    def check_add_ons_need(self, index: int):
+        """check for add ons from supply_add_ons table
+
+        Args:
+            index (int): length of the array created by convert_strings_to_num_array(strings)
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            NONE: NONE
+            bytes: byte string
+            
+        """
         try:
             addon_req = self.get_retail_db_words("Supply_Add_ons", index)
             if addon_req is not None:
@@ -109,7 +179,20 @@ class RetailActions:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def check_description_need(self, index):
+    def check_description_need(self, index: int):
+        """check for description from supply_descriptions table
+
+        Args:
+            index (int): length of the array created by convert_strings_to_num_array(strings)
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            NONE: NONE
+            bytes: byte string
+            
+        """
         try:
             desc_need = self.get_retail_db_words("Supply_Descriptions", index)
             if desc_need is not None:
@@ -120,12 +203,29 @@ class RetailActions:
 
     @staticmethod
     def generate_retail_action_request():
+        """creates a list of dictionaries with keys `query_type`, `item_list`, `description`, `business_name`, `add_ons` and its corresponding values 
+
+        Returns:
+            list: a list of dictionaries items with key value pairs
+        """
         lis = [{"query_type": query_type}, {"item_list": item_list},
                {"description": description}, {"business_name": business_name},
                {"add_ons": add_ons}]
         return lis
 
-    def ret_get_more_input(self, incomplete):
+    def ret_get_more_input(self, incomplete: list):
+        """calls request_user_for_input() and update_user_input_to_cloud() from user_input module
+
+        Args:
+            incomplete (list): list with word and its descriptions
+
+        Raises:
+            SpeechInvalidArgumentError: _description_
+
+        Returns:
+            str: SUCCESS
+            str: FAILURE
+        """
         try:
             if self.g_ui_obj.request_user_for_input(incomplete) == enums.FAILURE.name:
                 logging.error("Insufficient input from user, could not process the request '{}'".format(incomplete))
@@ -135,7 +235,19 @@ class RetailActions:
         except Exception as e:
             raise SpeechInvalidArgumentError(e)
 
-    def get_business_name(self, index):
+    def get_business_name(self, index: int):
+        """search businesses table for matching row and return business name in bytes string or notify user and get confirmation
+
+        Args:
+            index (int): length of the array created by convert_strings_to_num_array(strings)
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            NONE: NONE
+            bytes: name of business in bytes string
+        """
         try:
             self.get_retail_db_words("Businesses", index)
             if not self.words:
@@ -149,7 +261,19 @@ class RetailActions:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def get_business_action(self, index):
+    def get_business_action(self, index: int):
+        """check and return the matching business action from business_Actions table
+
+        Args:
+            index (int): length of the array created by convert_strings_to_num_array(strings)
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            NONE: NONE
+            bytes: name of business in bytes string
+        """
         try:
             self.get_retail_db_words("Business_actions", index)
             if not self.words:
@@ -160,15 +284,23 @@ class RetailActions:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def get_business_supplies_list(self, index):
+    def get_business_supplies_list(self, index: int):
+        """check given business's table for suuplies or available_supplies table for matching supplies
+
+        Args:
+            index (int): length of the array created by convert_strings_to_num_array(strings)
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            NONE: NONE
+            bytes: name of business in bytes string
+        """
         try:
             global business_name
             if business_name is not None:
-                try:
-                    self.get_retail_db_words(business_name.decode("utf_8")+"_supplies", index)
-                except sqlite3.OperationalError as e:
-                    raise e
-                    
+                self.get_retail_db_words(business_name.decode("utf_8")+"_supplies", index)
             else:
                 self.get_retail_db_words("Available_supplies", index)
             if not self.words:
@@ -179,7 +311,20 @@ class RetailActions:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def check_retail_command_status(self, index):
+    def check_retail_command_status(self, index: int):
+        """calls get_business_name, get_business_supplies_list, get_business_action, check_description_need and check_add_ons
+        then fill the variables bussiness_name, item_list, query_type, description and add_ons 
+
+        Args:
+            index (int): length of the array created by convert_strings_to_num_array(strings)
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: SUCCESS
+            str: FAILURE
+        """
         try:
             global business_name
             global item_list
@@ -208,11 +353,21 @@ class RetailActions:
             if not self.words:
                 return enums.SUCCESS.name
             else:
-                enums.FAILURE.name
+                return enums.FAILURE.name
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def decode_user_input_for_retail_actions(self, index, q_t):
+    def decode_user_input_for_retail_actions(self, index: int, q_t: queue):
+        """Decode anp Process user input after getting an array and index from user_input.convert_strings_to_num_array(strings) and put results in queue q_t which can be either
+        SUCCESS or FAILURE depending on conditions in the function.
+
+        Args:
+            index (int): length of the array created by convert_strings_to_num_array(strings)
+            q_t (queue): object created from Queue.queue() class
+
+        Raises:
+            SpeechProcessError: _description_
+        """
         try:
             if index == 1 and self.get_retail_actions(self.get_retail_db_words("Business_actions", index)):
                 logging.warning("This is of intention to " + query_type + " business action and incomplete")
@@ -241,12 +396,22 @@ class RetailActions:
                             q_t.put(enums.FAILURE.name)
                     else:
                         q_t.put(enums.FAILURE.name)
-
-            # print(f"retail action queue: {q_t.get()}")            
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def get_retail_actions(self, words):
+    def get_retail_actions(self, words: bytes):
+        """match words in argument with bytes string in self.data and fill query_type with word if matched
+
+        Args:
+            words (bytes): byte string from get_retail_db_words()
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            NONE: NONE
+            bytes: same as argument
+        """
         try:
             if words == self.data[0][2]:
                 global query_type

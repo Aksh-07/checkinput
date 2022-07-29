@@ -6,6 +6,7 @@ import logging
 import json
 from datetime import datetime
 """
+from distutils.text_file import TextFile
 import logging
 import android_actions as aa
 import retail_actions as ra
@@ -170,6 +171,8 @@ class TextProcess(BaseProcess):
 
 class ProcessUserInput:
     def __init__(self):
+        """initiates self.py_wrapper_obj() abd stores it in self.g_py_obj
+        """
         self.g_py_obj = self.py_wrapper_obj()
 
     def __del__(self):
@@ -177,9 +180,26 @@ class ProcessUserInput:
 
     @staticmethod
     def py_wrapper_obj():
+        """creates an object of PythonJavaBridge() class from python_wrapper module
+
+        Returns:
+            object: from class PythonJavaBridge()
+        """
         return python_wrapper.PythonJavaBridge()
 
-    def request_user_for_input(self, input_need):
+    def request_user_for_input(self, input_need: list):
+        """calls request_user_input_from_java from python_wrapper module for additional input from user
+
+        Args:
+            input_need (list): missing input required from user
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: SUCCESS
+            str: FAILURE
+        """
         try:
             if self.g_py_obj.request_user_input_from_java(input_need):
                 return enums.FAILURE.name
@@ -187,7 +207,19 @@ class ProcessUserInput:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def update_user_input_to_cloud(self, input_need):
+    def update_user_input_to_cloud(self, input_need: list):
+        """calls update_new_words_to_analysis from python_wrapper module
+
+        Args:
+            input_need (list): missing input
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: SUCCESS
+            str: FAILURE
+        """
         try:
             if self.g_py_obj.update_new_words_to_analysis(input_need):
                 return enums.FAILURE.name
@@ -202,7 +234,19 @@ class ProcessUserInput:
         pass
 
     @staticmethod
-    def convert_strings_to_num_array(strings):
+    def convert_strings_to_num_array(strings: str):
+        """convert string entered by user to a list with items sum of each word, length of word, and word itself
+
+        Args:
+            strings (str): user entered string
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            list: contains information about each word in string
+            index: total length of string
+        """
         try:
             strings = strings.lower()
             strings = strings.encode('utf_8')
@@ -218,7 +262,21 @@ class ProcessUserInput:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def decode_user_input(self, _string):
+    def decode_user_input(self, _string: str):
+        """convert user enterd string into list containg each words information using convert_strings_to_num_array() and then pass the information
+        to decode_user_input_for_android_actions() and decode_user_input_for_retail_actions() of module android_action and retail_action simultaniously using threads
+        for processing and give the results depending on processig
+
+        Args:
+            _string (str): user entered string
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: SUCCESS
+            str: INVALID_INPUT
+        """
         try:
             if _string is None:
                 return enums.INVALID_INPUT.name
@@ -258,7 +316,20 @@ class ProcessUserInput:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def run(self, type_, _input):
+    def run(self, type_: str, _input: str):
+        """Multiprocessing tasks based upon `type` and then process the user input `_input`
+
+        Args:
+            type_ (str): `audio`, `video` or `text`
+            _input (str): user input
+
+        Raises:
+            SpeechInvalidArgumentError: _description_
+
+        Returns:
+            int: 1
+            int: 0
+        """
         try:
             if type_ == "audio":
                 at = Process(target=self.start_audio_decode, args=(_input,), name="Audio")
@@ -289,7 +360,19 @@ class ProcessUserInput:
             raise SpeechInvalidArgumentError(e)
 
     @staticmethod
-    def read_input_db_file(db_file):
+    def read_input_db_file(db_file: TextFile):
+        """open the given .txt file in argument, read it and stores information as list items in 
+        table_names, android_input_data, business_input_data, supplies_input_data and data_tag
+
+        Args:
+            db_file (TextFile): .txt file to read data from
+
+        Raises:
+            SpeechInvalidArgumentError: _description_
+
+        Returns:
+            str: SUCCESS
+        """
         try:
             with open(db_file, 'r') as file1:
                 lines = file1.read().splitlines()
@@ -368,7 +451,19 @@ class ProcessUserInput:
         except Exception as e:
             raise SpeechInvalidArgumentError(e)
 
-    def update_local_data_base(self, db_file):
+    def update_local_data_base(self, db_file: TextFile):
+        """calls self.read_input_db_file() and insert rows in local ctreated database with items stored in android_input_data, business_input_data, supplies_input_data
+        depending on table_names and data_tag
+
+        Args:
+            db_file (TextFile): .txt file to read data from
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: result from diffrent insert functions from user_database module
+        """
         try:
             g_db_obj.create_connection()
             if self.read_input_db_file(db_file) == enums.FATAL_ERROR.name:
@@ -400,8 +495,21 @@ class ProcessUserInput:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def delete_local_db_data(self, table_name, data_):
+    def delete_local_db_data(self, table_name: str, data_: str):
+        """delete row from local database from given table_name by matching row with given data_
+
+        Args:
+            table_name (str): name of table
+            data_ (str): data to delete from table
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: result from delete_db_data() from user_database module
+        """
         try:
+            g_db_obj.create_connection()
             keys, index = self.convert_strings_to_num_array(data_)
             res = enums.FAILURE.name
             for i in range(0, len(keys)):
@@ -413,7 +521,18 @@ class ProcessUserInput:
             raise SpeechProcessError(e)
 
     @staticmethod
-    def create_local_data_base(table_name):
+    def create_local_data_base(table_name: list):
+        """calls create_table for each item in table_name after concerting the items to their values(sql query)
+
+        Args:
+            table_name (list): list of all the table names to be created
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: result from create_table() from user_database module
+        """
         try:
             g_db_obj.create_connection()
             res = enums.FAILURE.name

@@ -7,44 +7,42 @@ import io
 import numpy as np
 
 
-def adapt_array(arr):
-    out = io.BytesIO()
-    np.save(out, arr)
-    out.seek(0)
-    return sqlite3.Binary(out.read())
-
-
-def convert_array(text_):
-    out = io.BytesIO(text_)
-    out.seek(0)
-    return np.load(out, allow_pickle=True)
-
-
-#  When inserting data, the array Convert to text Insert
-sqlite3.register_adapter(np.ndarray, adapt_array)
-
-#  When querying data, the text Convert to array
-sqlite3.register_converter("array", convert_array)
-
 database = r"user_tasks.db"
 
 
 class ProcessDataBaseRequests:
     def __init__(self):
+        """initiate connection to database
+        """
         self.conn = None
 
     def __del__(self):
         pass
 
     def create_connection(self):
+        """if connection during initiation is none connect to the given database.
+
+        Raises:
+            SpeechProcessError: _description_
+        """
         try:
             if self.conn is None:
-                self.conn = sqlite3.connect(database, detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
-                logging.debug("connection created")
+                self.conn = sqlite3.connect(database, check_same_thread=False)
         except Error as e:
             raise SpeechProcessError(e)
 
-    def create_table(self, create_table_sql):
+    def create_table(self, create_table_sql: str):
+        """create table in database
+
+        Args:
+            create_table_sql (str): string to create table with all requirements
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: SUCCESS if table is created
+        """
         try:
             c = self.conn.cursor()
             c.execute(create_table_sql)
@@ -53,7 +51,18 @@ class ProcessDataBaseRequests:
         except Error as e:
             raise SpeechProcessError(e)
 
-    def delete_table(self, table_name):
+    def delete_table(self, table_name: str):
+        """Delete a table from database
+
+        Args:
+            table_name (str): name of table to delete
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: SUCCESS if table deleted successfully
+        """
         try:
             c = self.conn.cursor()
             qstr = "DROP TABLE {0}".format(table_name)
@@ -63,7 +72,19 @@ class ProcessDataBaseRequests:
         except Error as e:
             raise SpeechProcessError(e)
 
-    def insert_business_supplies_data(self, table_name, input_data):
+    def insert_business_supplies_data(self, table_name: str, input_data: list):
+        """to insert rows into tables related to bussiness
+
+        Args:
+            table_name (str): name of table
+            input_data (list): data to be inserted into rows
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: SUCCESS if items are inserted into rows successfully
+        """
         try:
             c = self.conn.cursor()
             qstr = "INSERT INTO {0} VALUES (?,?,?,?,?,?,?)".format(table_name)
@@ -73,7 +94,19 @@ class ProcessDataBaseRequests:
         except Error as e:
             raise SpeechProcessError(e)
 
-    def insert_supplies_data(self, table_name, input_data):
+    def insert_supplies_data(self, table_name: str, input_data: list):
+        """to insert rows into tables related to supplies
+
+        Args:
+            table_name (str): name of table
+            input_data (list): data to be inserted into rows
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: SUCCESS if items are inserted into rows successfully
+        """
         try:
             c = self.conn.cursor()
             qstr = "INSERT INTO {0} VALUES (?,?,?,?,?,?,?,?)".format(table_name)
@@ -83,7 +116,19 @@ class ProcessDataBaseRequests:
         except Error as e:
             raise SpeechProcessError(e)
 
-    def insert_android_data(self, table_name, input_data):
+    def insert_android_data(self, table_name: str, input_data: list):
+        """to insert rows into tables frelated to android functions
+
+        Args:
+            table_name (str): name of table
+            input_data (list): data to be inserted into rows
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: SUCCESS if items are inserted into rows successfully
+        """
         try:
             c = self.conn.cursor()
             qstr = "INSERT INTO {0} VALUES (?,?,?,?,?)".format(table_name)
@@ -93,7 +138,19 @@ class ProcessDataBaseRequests:
         except Error as e:
             raise SpeechProcessError(e)
 
-    def fetch_db_data(self, table_name, input_key):
+    def fetch_db_data(self, table_name: str, input_key: int):
+        """fetch rows from given table_name where size matches input key
+
+        Args:
+            table_name (str): name of table
+            input_key (int): size\weight of word to fetch
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            list: table rows with matching items
+        """
         try:
             c = self.conn.cursor()
             qstr = "SELECT * FROM {0} WHERE Size = ?".format(table_name)
@@ -103,14 +160,26 @@ class ProcessDataBaseRequests:
         except Error as e:
             raise SpeechProcessError(e)
 
-    def delete_db_data(self, table_name, input_key, input_data):
+    def delete_db_data(self, table_name: str, input_key: int, input_data: bytes):
+        """search for the row with matching input_key and input_data then delete the row if found.
+
+        Args:
+            table_name (str): name of table
+            input_key (int): size\weight of word
+            input_data (bytes): bytes string of word from convert_strings_to_num_array()
+
+        Raises:
+            SpeechProcessError: _description_
+
+        Returns:
+            str: SUCCESS if row is deleted
+            str: DB_DELETE_ERROR if no matching row in database
+        """
         try:
             records = self.fetch_db_data(table_name, input_key)
-            print(f"delete {records}")
             key_value = None
             if records is not None:
                 for row in records:
-                    print(row)
                     if row[3] == input_data:
                         key_value = row[3]
 

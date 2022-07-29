@@ -3,10 +3,20 @@ import logging
 
 
 class SpeechError(Exception):
-    def __init__(self, msg):
+    def __init__(self, msg: str):
+        """takes the message and save it to self.msg
+
+        Args:
+            msg (str): message to be displayed
+        """
         self.msg = msg
 
     def __str__(self):
+        """Returns the message in self.msg as string
+
+        Returns:
+            str: message given during initiation of the class
+        """
         return repr(self.msg)
 
 
@@ -23,6 +33,14 @@ class SpeechInvalidArgumentError(SpeechError):
 
 
 class SpeechResult(enum.Enum):
+    """symbolic names associated with unique values to represent diffrent errors in the program while running
+
+    Args:
+        enum: emumeration class
+
+    Raises:
+        SpeechInvalidArgumentError: _description_
+    """
     SUCCESS = 0
     FAILURE = 1
     WARNING = 2
@@ -46,7 +64,15 @@ class SpeechResult(enum.Enum):
     SERVICE_NOT_AVAILABLE = -107
 
     @staticmethod
-    def get_error_description(error_num):
+    def get_error_description(error_num: int):
+        """provide variable name and description related to error_num 
+
+        Args:
+            error_num (int): unique integer value associated with variables in SpeechResult class
+
+        Raises:
+            SpeechInvalidArgumentError: _description_
+        """
         try:
             logging.debug("Error type associated with error number {0} is : {1}".format(error_num,
                                                                                         SpeechResult(error_num)))

@@ -10,39 +10,37 @@ public class AppClass
 
 {
 
-    public String send_python_obj_to_java(ArrayList<Object> e)
+    public int send_python_obj_to_java(app_1 e)
 
     {
 
-        return "success";
+        return 0;
 
     }
 
 
 
-    public String fill_data_for_speech_request(ArrayList<Object> a)
+    public int fill_data_for_speech_request(ArrayList<Object> a)
 
     {
 
-        return "Success";
+        return 0;
 
     }
 
-    public String update_new_words_cloud(ArrayList<Object> b)
+    public int update_new_words_cloud(ArrayList<Object> b)
 
     {
 
-        return "Success";
+        return 0;
 
     }
 
-    public String process_user_actions(ArrayList<Object> c)
+    public int process_user_actions(ArrayList<Object> c)
 
     {
 
-        return "Success";
-
-
+        return 0;
 
     }
 
