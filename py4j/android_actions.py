@@ -127,8 +127,9 @@ class AndroidActions:
                         if self.validate_android_action() is not None:
                             words = self.g_ui_obj.request_user_for_input(word)
                             if words is enums.FAILURE.name:
-                                logging.error("Insufficient user input, could not process '{}'".format(word))
-                                self.g_ui_obj.update_user_input_to_cloud(word)
+                                insufficient_input = [self.data[i][2].decode("utf_8") for i in range(index)]
+                                logging.error("Insufficient user input, could not process '{}'".format(insufficient_input))
+                                self.g_ui_obj.update_user_input_to_cloud(insufficient_input)
                                 q_t.put(enums.INVALID_INPUT.name)
                             else:
                                 if self.check_android_command_status(index) == enums.INSUFFICIENT_INPUT.name:
@@ -170,7 +171,6 @@ class AndroidActions:
         """
         try:
             word_lst = self.words
-            print(f"world list: {word_lst}")
             is_android_action = self.get_android_functions(word_lst)
             if is_android_action is not None:
                 global query_type, action_type, location
@@ -181,7 +181,7 @@ class AndroidActions:
                     word_lst.remove(is_android_action)
                 finally:
                     pass
-                if not word_lst and is_android_action != "weather".encode('utf_8'):
+                if not word_lst and is_android_action != "weather".encode('utf_8') and index == 1:
                     intention = "show"
                     query_type = intention
                     action_type = "android_action"
@@ -190,7 +190,6 @@ class AndroidActions:
                     return enums.SUCCESS.name
                 else:
                     intention = self.get_intention_type(word_lst, index)
-                    print(f"intention: {intention}")
                     if intention is not None and intention.decode('utf_8') == "order":
                         if is_android_action.decode('utf_8') == "past" or is_android_action.decode('utf_8') == "history":
                             query_type = "show"

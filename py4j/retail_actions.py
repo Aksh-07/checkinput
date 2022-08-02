@@ -396,6 +396,8 @@ class RetailActions:
                             q_t.put(enums.FAILURE.name)
                     else:
                         q_t.put(enums.FAILURE.name)
+                else:
+                    q_t.put(enums.FAILURE.name)
         except Exception as e:
             raise SpeechProcessError(e)
 

@@ -298,11 +298,8 @@ class ProcessUserInput:
             ret_t.start()
             and_t.join()
             ret_t.join()
-            print(f"queue size: {q_t._qsize()}")
             ret_and = q_t.get()
             ret_ret = q_t.get()
-            print(f"and: {ret_and}")
-            print(f"ret: {ret_ret}")
             if ret_and != enums.SUCCESS.name:
                 logging.debug("User intention is not a android action")
             elif ret_ret != enums.SUCCESS.name:
