@@ -124,12 +124,13 @@ class AndroidActions:
                 else:
                     word = self.words
                     if self.check_android_command_status(index) == enums.INSUFFICIENT_INPUT.name:
-                        if self.validate_android_action() is not None:
+                        validate_word = self.validate_android_action()
+                        if validate_word is not None:
                             words = self.g_ui_obj.request_user_for_input(word)
                             if words is enums.FAILURE.name:
-                                insufficient_input = [self.data[i][2].decode("utf_8") for i in range(index)]
-                                logging.error("Insufficient user input, could not process '{}'".format(insufficient_input))
-                                self.g_ui_obj.update_user_input_to_cloud(insufficient_input)
+                                # insufficient_input = [self.data[i][2].decode("utf_8") for i in range(index)]
+                                logging.error("Insufficient user input, could not process '{}'".format(validate_word))
+                                self.g_ui_obj.update_user_input_to_cloud(validate_word)
                                 q_t.put(enums.INVALID_INPUT.name)
                             else:
                                 if self.check_android_command_status(index) == enums.INSUFFICIENT_INPUT.name:
