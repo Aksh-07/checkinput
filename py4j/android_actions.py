@@ -170,6 +170,7 @@ class AndroidActions:
         """
         try:
             word_lst = self.words
+            print(f"world list: {word_lst}")
             is_android_action = self.get_android_functions(word_lst)
             if is_android_action is not None:
                 global query_type, action_type, location
@@ -189,6 +190,7 @@ class AndroidActions:
                     return enums.SUCCESS.name
                 else:
                     intention = self.get_intention_type(word_lst, index)
+                    print(f"intention: {intention}")
                     if intention is not None and intention.decode('utf_8') == "order":
                         if is_android_action.decode('utf_8') == "past" or is_android_action.decode('utf_8') == "history":
                             query_type = "show"
@@ -216,7 +218,7 @@ class AndroidActions:
                                       item_list[0])
                         return enums.SUCCESS.name
                     else:
-                        return enums.INVALID_ANDROID_ACTION_TYPE.name
+                        return enums.INSUFFICIENT_INPUT.name
             else:
                 logging.info("This is not a android action")
                 return enums.INVALID_ANDROID_ACTION_TYPE.name
@@ -292,14 +294,10 @@ class AndroidActions:
             elif not self.words:
                 logging.error("The location you are interested is not under countries we provide our services")
                 return enums.INVALID_LOCATION.name
-                # location = self.words[0]
-                # item_list.append(location.decode('utf_8') + " " + "weather")
             elif self.words:
                 location = self.words[0]
                 item_list.append(location.decode('utf_8') + " " + "weather")
                 return enums.SUCCESS.name
-                # logging.error("The location you are interested is not under countries we provide our services")
-                # return enums.INVALID_LOCATION.name
         except Exception as e:
             raise SpeechProcessError(e)
 
