@@ -129,7 +129,6 @@ class AndroidActions:
                             words = self.g_ui_obj.request_user_for_input(word)
                             if words is enums.FAILURE.name:
                                 whole_input = [self.data[i][2] for i in range(index)]
-                                print(whole_input, word)
                                 insuf_input = [x.decode("utf_8") for x in whole_input if x not in word]
                                 logging.error("Insufficient user input, could not process '{}'".format(insuf_input))
                                 self.g_ui_obj.update_user_input_to_cloud(insuf_input)
@@ -193,7 +192,6 @@ class AndroidActions:
                     return enums.SUCCESS.name
                 else:
                     intention = self.get_intention_type(is_android_action, index)
-                    print(f"intention : {intention}")
                     if intention is not None and intention.decode('utf_8') == "order":
                         if is_android_action.decode('utf_8') == "past" or is_android_action.decode('utf_8') == "history":
                             query_type = "show"
