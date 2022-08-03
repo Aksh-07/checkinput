@@ -3,7 +3,7 @@ import logging
 import queue
 import string
 
-from numpy import array
+from numpy import array, byte
 from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError
 import user_database
@@ -128,9 +128,11 @@ class AndroidActions:
                         if validate_word is not None:
                             words = self.g_ui_obj.request_user_for_input(word)
                             if words is enums.FAILURE.name:
-                                # insufficient_input = [self.data[i][2].decode("utf_8") for i in range(index)]
-                                logging.error("Insufficient user input, could not process '{}'".format(validate_word))
-                                self.g_ui_obj.update_user_input_to_cloud(validate_word)
+                                whole_input = [self.data[i][2] for i in range(index)]
+                                print(whole_input, word)
+                                insuf_input = [x.decode("utf_8") for x in whole_input if x not in word]
+                                logging.error("Insufficient user input, could not process '{}'".format(insuf_input))
+                                self.g_ui_obj.update_user_input_to_cloud(insuf_input)
                                 q_t.put(enums.INVALID_INPUT.name)
                             else:
                                 if self.check_android_command_status(index) == enums.INSUFFICIENT_INPUT.name:
@@ -171,7 +173,7 @@ class AndroidActions:
             SERVICE_NOT_AVAILABLE: if user entered input is weather
         """
         try:
-            word_lst = self.words
+            word_lst = self.words.copy()
             is_android_action = self.get_android_functions(word_lst)
             if is_android_action is not None:
                 global query_type, action_type, location
@@ -190,7 +192,8 @@ class AndroidActions:
                     logging.debug("This is an " + action_type + " of intention to " + query_type + " " + item_list[0])
                     return enums.SUCCESS.name
                 else:
-                    intention = self.get_intention_type(word_lst, index)
+                    intention = self.get_intention_type(is_android_action, index)
+                    print(f"intention : {intention}")
                     if intention is not None and intention.decode('utf_8') == "order":
                         if is_android_action.decode('utf_8') == "past" or is_android_action.decode('utf_8') == "history":
                             query_type = "show"
@@ -205,7 +208,7 @@ class AndroidActions:
                     elif is_android_action.decode('utf_8') == "weather":
                         query_type = "show"
                         action_type = "android_action"
-                        if self.get_location_for_weather_report(word_lst, index) == enums.SUCCESS.name:
+                        if self.get_location_for_weather_report(is_android_action, index) == enums.SUCCESS.name:
                             logging.debug("This is an " + action_type + " of intention to " + query_type + " " +
                                       item_list[0])
                             return enums.SERVICE_NOT_AVAILABLE.name
@@ -218,6 +221,8 @@ class AndroidActions:
                                       item_list[0])
                         return enums.SUCCESS.name
                     else:
+                        item_list.append(is_android_action.decode("utf_8"))
+                        action_type = "android_action"
                         return enums.INSUFFICIENT_INPUT.name
             else:
                 logging.info("This is not a android action")
@@ -225,11 +230,11 @@ class AndroidActions:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def get_android_functions(self, words: list):
+    def get_android_functions(self, words: bytes):
         """Match for any word in argument words present in self.data.
 
         Args:
-            words (list): items in self.words after running get_android_db_words()
+            words (bytes): items in self.words after running get_android_db_words()
 
         Raises:
             SpeechProcessError: _description_
@@ -274,7 +279,7 @@ class AndroidActions:
         """search global locations table for location name to get weather report
 
         Args:
-            words (bytes): items in self.words after running get_android_db_words()
+            words (bytes): is_android_action
             index (int): length of the array created by convert_strings_to_num_array(strings)
 
         Raises:
@@ -288,14 +293,16 @@ class AndroidActions:
             global location
             current_location = location
             self.get_android_db_words("Global_locations", index)
+            weather_location = self.words.copy()
+            weather_location.remove(words)
             if index == 1:
                 item_list.append(current_location + " " + "weather")
                 return enums.SUCCESS.name
-            elif not self.words:
+            elif not weather_location:
                 logging.error("The location you are interested is not under countries we provide our services")
                 return enums.INVALID_LOCATION.name
-            elif self.words:
-                location = self.words[0]
+            else:
+                location = weather_location[0]
                 item_list.append(location.decode('utf_8') + " " + "weather")
                 return enums.SUCCESS.name
         except Exception as e:
@@ -306,7 +313,7 @@ class AndroidActions:
         """check for any matching word in argument words with words from table android actions
 
         Args:
-            words (bytes): items in self.words after running get_android_db_words()
+            words (bytes): is_android_action
             index (int): length of the array created by convert_strings_to_num_array(strings)
 
         Raises:
@@ -318,9 +325,10 @@ class AndroidActions:
         """
         try:
             self.get_android_db_words("Android_actions", index)
-            action_list = self.words
+            action_list = self.words.copy()
+            action_list.remove(words)
             for word in action_list:
-                if s_any(word in s for s in words):
+                if s_any(word in s for s in self.data):
                     return word
             return None
         except Exception as e:

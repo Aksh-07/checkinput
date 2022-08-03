@@ -18,7 +18,7 @@ if __name__ == "__main__":
         user_input.table_names.clear(), user_input.android_input_data.clear(), user_input.business_input_data.clear(), user_input.supplies_input_data.clear(), user_input.data_tag.clear()
 
     # obj.update_local_db("py4j/data.txt")
-    ui = obj.get_user_input("text", "adgh video")
+    ui = obj.get_user_input("text", "video abc")
     print(ui)
     # dl = obj.delete_local_db_rows("supply_add_ons", "pizza")
     print("Total execution time : %s " %(time() - start_time_))
