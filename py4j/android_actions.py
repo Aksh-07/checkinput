@@ -1,9 +1,9 @@
-from builtins import any as s_any
+from builtins import any as s_any, input as inp
 import logging
 import queue
 import string
 
-from numpy import array, byte
+from numpy import array
 from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError
 import user_database
@@ -100,20 +100,21 @@ class AndroidActions:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def decode_user_input_for_android_actions(self, index: int, q_t: queue):
+    def decode_user_input_for_android_actions(self, index: int, q_t: queue, q_m1, q_m2):
         """Decode anp Process user input after getting an array and index from user_input.convert_strings_to_num_array(strings) and put results in queue q_t which can be either
         SUCCESS or INVALID_INPUT depending on conditions in the function.
 
         Args:
             index (int): length of the array created by convert_strings_to_num_array(strings)
-            q_t (queue): object created from Queue.queue() class
+            q_t (queue): object created from queue.Queue() class
 
         Raises:
             SpeechProcessError: _description_
         """
         try:
+        
             if index == 1 and self.get_android_actions(self.get_android_db_words("Android_actions",
-                                                                                 index)):
+                                                                                index)):
                 logging.debug("This is of intention to " + query_type + " android application")
                 q_t.put(enums.SUCCESS.name)
             else:
@@ -134,14 +135,14 @@ class AndroidActions:
                                 self.g_ui_obj.update_user_input_to_cloud(insuf_input)
                                 q_t.put(enums.INVALID_INPUT.name)
                             else:
-                                if self.check_android_command_status(index) == enums.INSUFFICIENT_INPUT.name:
+                                q_m1.put(1)
+                                q_m1.task_done()
+                                ni = self.additional_user_input(q_m2.get())
+                                if self.check_android_command_status(ni) == enums.INSUFFICIENT_INPUT.name:
                                     if self.validate_android_action() is not None:
                                         q_t.put(enums.INVALID_INPUT.name)
                                     else:
-                                        if self.validate_android_action() is not None:
-                                            q_t.put(enums.INVALID_INPUT.name)
-                                        else:
-                                            q_t.put(enums.SUCCESS.name)
+                                        q_t.put(enums.SUCCESS.name)
                                 else:
                                     if self.validate_android_action() is not None:
                                         q_t.put(enums.INVALID_INPUT.name)
@@ -386,3 +387,9 @@ class AndroidActions:
             return True
         else:
             return False
+
+    def additional_user_input(self, user_text):
+        new_word, new_index = self.g_ui_obj.convert_strings_to_num_array(user_text)
+        self.data = new_word
+        return new_index
+

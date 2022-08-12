@@ -12,7 +12,7 @@ import android_actions as aa
 import retail_actions as ra
 from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError, SpeechInvalidArgumentError
-from multiprocessing import Process, Lock, Value
+from multiprocessing import Process, Lock, Value, JoinableQueue
 import multiprocessing
 from threading import Thread
 import queue
@@ -141,8 +141,8 @@ data_tag = []
 data_read = Value('i', 0)
 files_accessed = Value('i', 0)
 
-logging.basicConfig(level=logging.DEBUG)
-logging.getLogger("py4j").setLevel(logging.INFO)
+# logging.basicConfig(level=logging.DEBUG)
+# logging.getLogger("py4j").setLevel(logging.INFO)
 g_db_obj = user_database.ProcessDataBaseRequests()
 
 
@@ -205,7 +205,8 @@ class ProcessUserInput:
             t1=Thread(target=self.g_py_obj.request_user_input_from_java,args=(input_need,que1,))
             t1.start()
             if que1.get():
-                return enums.FAILURE.name
+                # return enums.FAILURE.name 
+                return enums.SUCCESS.name
             return enums.SUCCESS.name
         except Exception as e:
             raise SpeechProcessError(e)
@@ -268,7 +269,7 @@ class ProcessUserInput:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def decode_user_input(self, _string: str):
+    def decode_user_input(self, _string: str, q_m1, q_m2):
         """convert user enterd string into list containg each words information using convert_strings_to_num_array() and then pass the information
         to decode_user_input_for_android_actions() and decode_user_input_for_retail_actions() of module android_action and retail_action simultaniously using threads
         for processing and give the results depending on processig
@@ -292,8 +293,8 @@ class ProcessUserInput:
             q_t = queue.Queue(2)
             g_a_obj = aa.AndroidActions(words)
             g_r_obj = ra.RetailActions(words)
-            and_t = Thread(target=g_a_obj.decode_user_input_for_android_actions, args=(index, q_t))
-            ret_t = Thread(target=g_r_obj.decode_user_input_for_retail_actions, args=(index, q_t))
+            and_t = Thread(target=g_a_obj.decode_user_input_for_android_actions, args=(index, q_t, q_m1, q_m2), daemon=True)
+            ret_t = Thread(target=g_r_obj.decode_user_input_for_retail_actions, args=(index, q_t), daemon=True)
             and_t.start()
             ret_t.start()
             and_t.join()
@@ -321,7 +322,7 @@ class ProcessUserInput:
         except Exception as e:
             raise SpeechProcessError(e)
 
-    def run(self, type_: str, _input: str):
+    def run(self, type_: str):
         """Multiprocessing tasks based upon `type` and then process the user input `_input`
 
         Args:
@@ -337,26 +338,44 @@ class ProcessUserInput:
         """
         try:
             if type_ == "audio":
-                at = Process(target=self.start_audio_decode, args=(_input,), name="Audio")
+                user_text = input("Enter something.\n")
+                at = Process(target=self.start_audio_decode, args=(user_text,), name="Audio")
                 at.start()
                 m_lock1.acquire()
                 at.join()
                 m_lock1.release()
                 return 1
             elif type_ == "video":
-                vt = Process(target=self.start_security_decode, args=(_input,), name="Video")
+                user_text = input("Enter something.\n")
+                vt = Process(target=self.start_security_decode, args=(user_text), name="Video")
                 vt.start()
                 m_lock2.acquire()
                 vt.join()
                 m_lock2.release()
                 return 1
             elif type_ == "text":
-                tt = Process(target=self.decode_user_input, args=(_input,), name="Text")
+                q_m1= JoinableQueue()
+                q_m2= JoinableQueue()
+                user_text = input("Enter something.\n")
+                # print(q_m.get())
+                # if q_m.empty():
+                tt = Process(target=self.decode_user_input, args=(user_text,q_m1,q_m2,), name="Text")
                 tt.start()
                 m_lock3.acquire()
-                tt.join()
-                m_lock3.release()
-                return 1
+                try:
+                    trigger = q_m1.get(timeout=0.3)
+                    if trigger:
+                        ins_text = input("Insufficent input, Enter again.\n")
+                        q_m2.put(ins_text)
+                        q_m2.task_done()
+                except queue.Empty:
+                    pass
+                finally:
+                    tt.join()
+                    # q_m1.join()
+                    # q_m2.join()
+                    m_lock3.release()
+                    return 1
             else:
                 for p in multiprocessing.active_children():
                     p.join()

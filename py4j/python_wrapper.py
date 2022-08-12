@@ -66,7 +66,7 @@ class PythonSpeechWrapper:
     def __del__(self):
         pass
 
-    def get_user_input(self, data_type: str, input_data: str):
+    def get_user_input(self, data_type: str):
         """calls and compare the results from self.user_obj.run() with data_type and input_dta as argument
 
         Args:
@@ -82,7 +82,7 @@ class PythonSpeechWrapper:
         """
         try:
             start_time = datetime.now()
-            if self.user_obj.run(data_type, input_data) == 0:
+            if self.user_obj.run(data_type) == 0:
                 logging.error("Failed to start speech process")
                 return 1
             logging.debug("Total execution time : %s " % (datetime.now() - start_time))
