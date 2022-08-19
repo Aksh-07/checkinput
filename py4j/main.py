@@ -7,10 +7,16 @@ import speech_errors
 from time import time
 import os
 
+print(__name__)
+print("before start")
 if __name__ == "__main__":
+    print("start")
     start_time_ = time()
+    print(1)
     user_obj = user_input.ProcessUserInput()
+    print(2)
     obj = python_wrapper.PythonSpeechWrapper()
+    print(3)
 
     if "user_tasks.db" not in os.listdir(r"C:\Users\kc\website\checkinput"):
         read_file = user_obj.read_input_db_file("py4j/data.txt")
@@ -20,7 +26,9 @@ if __name__ == "__main__":
     # obj.update_local_db("py4j/data.txt")
     # user_text = input("enter something\n")
     ui = obj.get_user_input("text")
+    # print(1)
     
+    # print(2)
     print(ui)
     # dl = obj.delete_local_db_rows("supply_add_ons", "pizza")
     print("Total execution time : %s " %(time() - start_time_))

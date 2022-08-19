@@ -8,6 +8,7 @@ from datetime import datetime
 """
 from distutils.text_file import TextFile
 import logging
+from re import A
 import android_actions as aa
 import retail_actions as ra
 from speech_errors import SpeechResult as enums
@@ -19,6 +20,7 @@ import queue
 import numpy as np
 import user_database
 import python_wrapper
+# from decorators import status_check
 
 """sample = [[1, 3, "some", 5], [0, 2, 4, 6], [0, 59, "thing", 2], [9, 5, "yes", 2], [9, 8, "Ko", 6]]
 for x in sample:
@@ -142,7 +144,8 @@ data_read = Value('i', 0)
 files_accessed = Value('i', 0)
 
 # logging.basicConfig(level=logging.DEBUG)
-# logging.getLogger("py4j").setLevel(logging.INFO)
+logging.basicConfig(format="%(levelname)s : %(message)s [%(module)s, %(funcName)s, %(lineno)d]", level=logging.DEBUG)
+logging.getLogger("py4j").setLevel(logging.INFO)
 g_db_obj = user_database.ProcessDataBaseRequests()
 
 
@@ -185,6 +188,7 @@ class ProcessUserInput:
         Returns:
             object: from class PythonJavaBridge()
         """
+        logging.info("Success")
         return python_wrapper.PythonJavaBridge()
 
     def request_user_for_input(self, input_need: list):
@@ -202,15 +206,18 @@ class ProcessUserInput:
         """
         try:
             que1=queue.Queue()
-            t1=Thread(target=self.g_py_obj.request_user_input_from_java,args=(input_need,que1,))
+            t1=Thread(target=self.g_py_obj.request_user_input_from_java,args=(input_need,que1))
             t1.start()
             if que1.get():
-                # return enums.FAILURE.name 
+                # return enums.FAILURE.name
+                logging.info("Success") 
                 return enums.SUCCESS.name
+            logging.info("Success")
             return enums.SUCCESS.name
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
-
+    
     def update_user_input_to_cloud(self, input_need: list):
         """calls update_new_words_to_analysis from python_wrapper module
 
@@ -229,18 +236,23 @@ class ProcessUserInput:
             t2=Thread(target=self.g_py_obj.update_new_words_to_analysis,args=(input_need,que2))
             t2.start()
             if que2.get():
+                logging.info("Success")
                 return enums.FAILURE.name
+            logging.info("Success")
             return enums.SUCCESS.name
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechInvalidArgumentError(e)
 
+    
     def start_audio_decode(self, data):
         pass
 
+    
     def start_security_decode(self, data):
         pass
 
-    @staticmethod
+    @staticmethod 
     def convert_strings_to_num_array(strings: str):
         """convert string entered by user to a list with items sum of each word, length of word, and word itself
 
@@ -265,8 +277,10 @@ class ProcessUserInput:
                 data_arr = np.array(arr)
                 word_lst = [np.sum(data_arr), data_arr.size, str1]
                 words_lst.append(word_lst)
+            logging.info("Success")
             return words_lst, index
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
     def decode_user_input(self, _string: str, q_m1, q_m2):
@@ -301,6 +315,8 @@ class ProcessUserInput:
             ret_t.join()
             ret_and = q_t.get()
             ret_ret = q_t.get()
+            # print(f"ret and: {ret_and}")
+            # print(f"ret ret: {ret_ret}")
             if ret_and != enums.SUCCESS.name:
                 logging.debug("User intention is not a android action")
             elif ret_ret != enums.SUCCESS.name:
@@ -309,6 +325,7 @@ class ProcessUserInput:
                 logging.debug("User intention is a android action")
                 t3=Thread(target=self.g_py_obj.process_user_intention_actions,args=(g_a_obj.generate_android_action_request(),))
                 t3.start() 
+                # print("here")
                 return enums.SUCCESS.name
             elif ret_ret == enums.SUCCESS.name:
                 logging.debug("User intention is a retail action")
@@ -317,11 +334,12 @@ class ProcessUserInput:
                 return enums.SUCCESS.name
             else:
                 logging.debug("Unable to process user input")
-                self.update_user_input_to_cloud(list(_string))
-            return enums.INVALID_INPUT.name
+                # self.update_user_input_to_cloud(list(_string))
+                return enums.INVALID_INPUT.name
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
-
+    
     def run(self, type_: str):
         """Multiprocessing tasks based upon `type` and then process the user input `_input`
 
@@ -344,6 +362,7 @@ class ProcessUserInput:
                 m_lock1.acquire()
                 at.join()
                 m_lock1.release()
+                logging.info("Success")
                 return 1
             elif type_ == "video":
                 user_text = input("Enter something.\n")
@@ -352,18 +371,18 @@ class ProcessUserInput:
                 m_lock2.acquire()
                 vt.join()
                 m_lock2.release()
+                logging.info("Success")
                 return 1
             elif type_ == "text":
                 q_m1= JoinableQueue()
                 q_m2= JoinableQueue()
                 user_text = input("Enter something.\n")
-                # print(q_m.get())
-                # if q_m.empty():
-                tt = Process(target=self.decode_user_input, args=(user_text,q_m1,q_m2,), name="Text")
+                tt = Process(target=self.decode_user_input, args=(user_text,q_m1,q_m2,), name="Text", daemon=True)
                 tt.start()
                 m_lock3.acquire()
+                # print("lock")
                 try:
-                    trigger = q_m1.get(timeout=0.3)
+                    trigger = q_m1.get(timeout=1)
                     if trigger:
                         ins_text = input("Insufficent input, Enter again.\n")
                         q_m2.put(ins_text)
@@ -371,17 +390,26 @@ class ProcessUserInput:
                 except queue.Empty:
                     pass
                 finally:
+                    # print("not joined")
+                    # print("queue")
+                    # python_wrapper.gateway.close(close_callback_server_connections=True)
+                    # print(tt.is_alive())
                     tt.join()
                     # q_m1.join()
                     # q_m2.join()
                     m_lock3.release()
+                    # print("joined")
+                    logging.info("Success")
                     return 1
             else:
                 for p in multiprocessing.active_children():
                     p.join()
+                logging.info("Success")
                 return 0
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechInvalidArgumentError(e)
+
 
     @staticmethod
     def read_input_db_file(db_file: TextFile):
@@ -468,11 +496,11 @@ class ProcessUserInput:
                         words_lst = []
                     else:
                         logging.error("Invalid tag or line in db file")
-
                     word_lst.clear()
             logging.debug("Reading input db file success")
             return enums.SUCCESS.name
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechInvalidArgumentError(e)
 
     def update_local_data_base(self, db_file: TextFile):
@@ -502,23 +530,31 @@ class ProcessUserInput:
                     res = g_db_obj.insert_android_data(table, android_input_data[a])
                     if res != enums.SUCCESS.name:
                         logging.error("Failed to update android data at index {0} in table {1}".format(a, table))
+                    else:
+                        logging.info("Success")
                     a += 1
                 elif data_tag[i] == "business":
                     res = g_db_obj.insert_business_supplies_data(table, business_input_data[b])
                     if res != enums.SUCCESS.name:
                         logging.error("Failed to update business data at index {0} in table {1}".format(b, table))
+                    else:
+                        logging.info("Success")
                     b += 1
                 elif data_tag[i] == "supplies":
                     res = g_db_obj.insert_supplies_data(table, supplies_input_data[s])
                     if res != enums.SUCCESS.name:
                         logging.error("Failed to update supplies data at index {0} in table {1}".format(s, table))
+                    else:
+                        logging.info("Success")
                     s += 1
                 else:
                     logging.error("Invalid data at index in table {0}".format(table))
             return res
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
+    
     def delete_local_db_data(self, table_name: str, data_: str):
         """delete row from local database from given table_name by matching row with given data_
 
@@ -540,8 +576,10 @@ class ProcessUserInput:
                 res = g_db_obj.delete_db_data(table_name, keys[i][0], keys[i][2])
                 if res != enums.SUCCESS.name:
                     logging.error("Failed to delete data {0} from table {1}".format(keys[i][2], keys[i][0]))
+            logging.info("Success")
             return res
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
     @staticmethod
@@ -564,7 +602,9 @@ class ProcessUserInput:
                 res = g_db_obj.create_table(eval(table))
                 if res != enums.SUCCESS.name:
                     logging.error("Failed to create table {}".format(table))
+            logging.info("Success")
             return res
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 

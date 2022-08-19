@@ -3,6 +3,7 @@ package py4j;
 
 
 import java.util.ArrayList;
+import java.util.Queue;
 
 
 
@@ -20,18 +21,18 @@ public class AppClass
 
 
 
-    public int fill_data_for_speech_request(ArrayList<Object> a)
+    public int fill_data_for_speech_request(ArrayList<Object> c)
 
     {
-
+        // e.extra_user_input(string, queue);
         return 0;
 
     }
 
-    public int update_new_words_cloud(ArrayList<Object> b)
+    public int update_new_words_cloud(ArrayList<Object> b, app_1 e)
 
     {
-
+        e.string_to_num_array("Sahil");
         return 0;
 
     }

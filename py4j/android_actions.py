@@ -8,6 +8,7 @@ from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError
 import user_database
 import user_input
+# from decorators import status_check
 
 query_type = ""
 item_list = []
@@ -34,12 +35,14 @@ class AndroidActions:
         pass
 
     @staticmethod
+    
     def user_input_data_obj():
         """creates an object of ProcessUserInput() class from user_input module
 
         Returns:
             object: object of user_input.ProcessUserInput() class
         """
+        logging.info("Success")
         return user_input.ProcessUserInput()
 
     @staticmethod
@@ -56,9 +59,12 @@ class AndroidActions:
         """
         for i in range(len(string_input)):
             if string_input[i] != compare_string[i]:
+                logging.info("Success")
                 return False
+        logging.info("Success")
         return True
 
+    
     def get_android_db_words(self, table: str, index: int):
         """Fetch all the rows from given table with the given index then find the one that match the user input and stores 
         the string in self.words
@@ -85,6 +91,7 @@ class AndroidActions:
                             if self.compare_input_string(r[3], self.data[0][2]):
                                 self.words.append(r[3])
                                 return r[3]
+                    logging.info("Success")
                     return None
                 else:
                     logging.debug("This is of intention to " + query_type + " android application")
@@ -96,10 +103,13 @@ class AndroidActions:
                         if r[1] == self.data[i][1]:
                             if self.compare_input_string(r[3], self.data[i][2]):
                                 self.words.append(r[3])
+            logging.info("Success")
             return None
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
+    
     def decode_user_input_for_android_actions(self, index: int, q_t: queue, q_m1, q_m2):
         """Decode anp Process user input after getting an array and index from user_input.convert_strings_to_num_array(strings) and put results in queue q_t which can be either
         SUCCESS or INVALID_INPUT depending on conditions in the function.
@@ -127,6 +137,9 @@ class AndroidActions:
                     if self.check_android_command_status(index) == enums.INSUFFICIENT_INPUT.name:
                         validate_word = self.validate_android_action()
                         if validate_word is not None:
+                            i_q = queue.Queue()
+                            q_m1.put(1)
+                            q_m1.task_done()
                             words = self.g_ui_obj.request_user_for_input(word)
                             if words is enums.FAILURE.name:
                                 whole_input = [self.data[i][2] for i in range(index)]
@@ -154,10 +167,13 @@ class AndroidActions:
                         if self.validate_android_action() is not None:
                             q_t.put(enums.INVALID_INPUT.name)
                         else:
-                            q_t.put(enums.SUCCESS.name)       
+                            q_t.put(enums.SUCCESS.name)    
+            logging.info("Success")   
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
+    
     def check_android_command_status(self, index):
         """add items in intention, query_type, action_type and item list depending on diffrent conditions as mentioned in function if entered input is an android action.
 
@@ -222,13 +238,16 @@ class AndroidActions:
                     else:
                         item_list.append(is_android_action.decode("utf_8"))
                         action_type = "android_action"
+                        logging.error("Insufficient input")
                         return enums.INSUFFICIENT_INPUT.name
             else:
                 logging.info("This is not a android action")
                 return enums.INVALID_ANDROID_ACTION_TYPE.name
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
+    
     def get_android_functions(self, words: bytes):
         """Match for any word in argument words present in self.data.
 
@@ -245,11 +264,15 @@ class AndroidActions:
         try:
             for word in self.data:
                 if s_any(word[2] in s for s in words):
+                    logging.info("Success")
                     return word[2]
+            logging.info("Success")
             return None
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
+    
     def get_android_actions(self, words: bytes):
         """enter item in query type if words match byte string in self.words and is not order or empty
 
@@ -265,15 +288,20 @@ class AndroidActions:
         """
         try:
             if "order".encode("utf_8") == words or words is None:
+                logging.info("Success")
                 return None
             if words == self.data[0][2]:
                 global query_type
                 query_type = words.decode('utf_8')
+                logging.info("Success")
                 return words
+            logging.info("Success")
             return None
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
+    
     def get_location_for_weather_report(self, words: bytes, index: int):
         """search global locations table for location name to get weather report
 
@@ -296,6 +324,7 @@ class AndroidActions:
             weather_location.remove(words)
             if index == 1:
                 item_list.append(current_location + " " + "weather")
+                logging.info("Success")
                 return enums.SUCCESS.name
             elif not weather_location:
                 logging.error("The location you are interested is not under countries we provide our services")
@@ -303,11 +332,13 @@ class AndroidActions:
             else:
                 location = weather_location[0]
                 item_list.append(location.decode('utf_8') + " " + "weather")
+                logging.info("Success")
                 return enums.SUCCESS.name
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
-
+    
     def get_intention_type(self, words: bytes, index: int):
         """check for any matching word in argument words with words from table android actions
 
@@ -328,9 +359,12 @@ class AndroidActions:
             action_list.remove(words)
             for word in action_list:
                 if s_any(word in s for s in self.data):
+                    logging.info("Success")
                     return word
+            logging.info("Success")
             return None
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
     @staticmethod
@@ -342,8 +376,10 @@ class AndroidActions:
         """
         lis = [{"query_type": query_type}, {"item_list": item_list},
                {"description": description}, {"action_type": action_type}]
+        logging.info("Success")
         return lis
 
+    
     def validate_android_action(self):
         """put action_type, query_type, item_list, description values if not present
 
@@ -368,10 +404,13 @@ class AndroidActions:
                 logging.error("Android description is not available")
                 word.append("description")
             if not word:
+                logging.info("Success")
                 return None
             else:
+                logging.info("Success")
                 return word
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
     @staticmethod
@@ -382,14 +421,19 @@ class AndroidActions:
             boolean: True or FALSE depending on conditions
         """
         if "photos" in item_list or "music" in item_list or "videos" in item_list:
+            logging.info("Success")
             return True
         elif query_type == "play":
+            logging.info("Success")
             return True
         else:
+            logging.info("Success")
             return False
 
+    
     def additional_user_input(self, user_text):
         new_word, new_index = self.g_ui_obj.convert_strings_to_num_array(user_text)
         self.data = new_word
+        logging.info("Success")
         return new_index
 

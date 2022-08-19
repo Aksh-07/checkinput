@@ -1,12 +1,13 @@
 from distutils.text_file import TextFile
-from py4j.java_gateway import JavaGateway,GatewayParameters
+from multiprocessing import current_process
+from py4j.java_gateway import JavaGateway,GatewayParameters, CallbackServerParameters
 import user_input as py_obj
 from datetime import datetime
 from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError, SpeechInvalidArgumentError
 import logging
-
-
+import android_actions
+# from decorators import status_check
 
 questions = ["can", "should", "would", "what", "when", "where", "how", "who", "whose", "why", "which", "isn't", "don't",
              "aren't", "won't", "must"]
@@ -51,7 +52,8 @@ men_clothing = []
 optical_frames = []
 sports = []
 
-
+print(current_process().name)
+# if current_process().name!="MainProcess":
 gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
 # speech_process = gateway.jvm.py4j.examples.AppClass()
 speech_process = gateway.jvm.py4j.AppClass()
@@ -66,6 +68,15 @@ class PythonSpeechWrapper:
     def __del__(self):
         pass
 
+    def string_to_num_array(self, string):
+        a = py_obj.ProcessUserInput.convert_strings_to_num_array(string)
+        print(a)
+
+    def extra_user_input(self, item, i_q):
+        a = android_actions.AndroidActions.additional_user_input(item)
+        i_q.put(a)
+
+        
     def get_user_input(self, data_type: str):
         """calls and compare the results from self.user_obj.run() with data_type and input_dta as argument
 
@@ -88,8 +99,10 @@ class PythonSpeechWrapper:
             logging.debug("Total execution time : %s " % (datetime.now() - start_time))
             return 0
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
+    
     def update_local_db(self, db_file: TextFile):
         """calls update_local_data_base() function from user_input module
 
@@ -103,10 +116,13 @@ class PythonSpeechWrapper:
             str : result from update_local_data_base() function from user_input module
         """
         try:
+            logging.info("Success")
             return self.user_obj.update_local_data_base(db_file)
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechInvalidArgumentError(e)
 
+    
     def create_local_db_tables(self, table_names: list):
         """calls create_local_data_base() from user_input module to create local database with given table names
 
@@ -116,8 +132,10 @@ class PythonSpeechWrapper:
         Returns:
             str: result from function create_local_data_base() from user_input module
         """
+        logging.info("Success")
         return self.user_obj.create_local_data_base(table_names)
 
+    
     def delete_local_db_rows(self, table_name: str, input_data: str):
         """calls delete_local_db_data() from user_input module to delete row with given input_data from given table_name
 
@@ -128,11 +146,12 @@ class PythonSpeechWrapper:
         Returns:
             str: result from function delete_local_db_data() from user_input module
         """
+        logging.info("Success")
         return self.user_obj.delete_local_db_data(table_name, input_data)
 
 
-class Java:
-    implements = ['py4j.binary.SpeechApp']
+    class Java:
+        implements = ['py4j.app_1']
 
 
 class PythonJavaBridge(object):
@@ -143,6 +162,7 @@ class PythonJavaBridge(object):
         pass
 
     @staticmethod
+    
     def send_python_obj_java_call():
         """Sends python object to the Java side.
 
@@ -154,18 +174,19 @@ class PythonJavaBridge(object):
                  FALIURE if function fails
         """
         try:
-            _obj = PythonSpeechWrapper()
             # "Sends" python object to the Java side.
-            result = speech_process.send_python_obj_to_java(_obj)
+            result = speech_process.send_python_obj_to_java()
             if result == 0:
                 logging.error("Failed to send python object to Java")
                 return enums.FAILURE.name
+            logging.info("Success")
             return enums.SUCCESS.name
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechInvalidArgumentError(e)
 
     @staticmethod
-    def request_user_input_from_java(incomplete_input: list,que1):
+    def request_user_input_from_java(incomplete_input: list, que1):
         """send incomplete_input to java side functions
 
         Args:
@@ -179,12 +200,15 @@ class PythonJavaBridge(object):
                  FAILURE if java side functions return nothing
         """
         try:
+            # obj = PythonSpeechWrapper()
             result = speech_process.fill_data_for_speech_request(incomplete_input)
             if result is None:
                 logging.error("Failed to get requested input")
                 que1.put( enums.FAILURE.name)
+            logging.info("Success")
             que1.put(enums.SUCCESS.name)
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
     @staticmethod
@@ -202,12 +226,15 @@ class PythonJavaBridge(object):
                  FAILURE if java side functions return nothing
         """
         try:
-            result = speech_process.update_new_words_cloud(new_user_words)
+            obj = PythonSpeechWrapper()
+            result = speech_process.update_new_words_cloud(new_user_words, obj)
             if result:
                 logging.error("Failed to get requested input")
                 que2.put( enums.FAILURE.name)
+            logging.info("Success")
             que2.put(enums.SUCCESS.name)
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
     @staticmethod
@@ -222,9 +249,13 @@ class PythonJavaBridge(object):
         """
         try:
             speech_process.process_user_actions(words)
+            logging.info("Success")
         except Exception as e:
+            logging.error(f"{e}")
             raise SpeechProcessError(e)
 
+    class Java:
+        implements = ['py4j.app_1']
 
 # if __name__ == "__main__":
 #     start_time_ = datetime.now()
