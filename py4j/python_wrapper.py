@@ -52,7 +52,6 @@ men_clothing = []
 optical_frames = []
 sports = []
 
-print(current_process().name)
 # if current_process().name!="MainProcess":
 gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
 # speech_process = gateway.jvm.py4j.examples.AppClass()
@@ -162,7 +161,6 @@ class PythonJavaBridge(object):
         pass
 
     @staticmethod
-    
     def send_python_obj_java_call():
         """Sends python object to the Java side.
 
