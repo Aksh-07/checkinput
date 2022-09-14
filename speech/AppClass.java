@@ -9,7 +9,6 @@ import java.util.ArrayList;
 
 class MyThread1 extends Thread {
     /*creates a thread from function sendToPython of class AppClass */
-
     public MyThread1(String name) {
         super(name);
 
@@ -141,7 +140,7 @@ public class AppClass {
             System.out.print("Enter s to stop, y to continue.\n");
             javaContinue = br.readLine();
 
-            if (javaContinue.equals("s")) {
+            if (!javaContinue.equals("y")) {
                 ((ClientServer) clientServer).shutdown();
                 System.out.println("Java gateway closed");
             }

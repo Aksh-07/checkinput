@@ -13,7 +13,6 @@ from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError, SpeechInvalidArgumentError
 import logging
 import android_actions
-# from decorators import status_check
 
 questions = ["can", "should", "would", "what", "when", "where", "how", "who", "whose", "why", "which", "isn't", "don't",
              "aren't", "won't", "must"]
@@ -169,18 +168,6 @@ class PythonJavaBridge:
 
     def __del__(self):
         pass
-
-    # @staticmethod
-    # def send_python_obj_java_call():
-    #     try:
-    #         _obj = PythonSpeechWrapper()
-    #         result = speech_process.send_python_obj_to_java(_obj)
-    #         if result == "Failed":
-    #             logging.error("Failed to send python object to Java")
-    #             return enums.FAILURE.name
-    #         return enums.SUCCESS.name
-    #     except Exception as e:
-    #         raise SpeechInvalidArgumentError(e)
 
 
     @staticmethod

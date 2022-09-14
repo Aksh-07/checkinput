@@ -13,7 +13,7 @@ from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError, SpeechInvalidArgumentError
 import user_database
 import user_input
-# from decorators import status_check
+
 """elif self.check_registered_retailer(is_android_action) is not None:
     retailer = is_android_action
     query_type = "order"

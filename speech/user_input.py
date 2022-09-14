@@ -195,7 +195,6 @@ class ProcessUserInput:
         logging.info("Success")
         return python_wrapper.PythonJavaBridge()
 
-
     def request_user_for_input(self, input_need):
         """calls request_user_input_from_java from python_wrapper module for additional input from user
         Raises:

@@ -23,7 +23,6 @@ class SpeechError(Exception):
 class SpeechProcessError(SpeechError):
     pass
 
-
 class SpeechTimeOutError(SpeechError):
     pass
 

@@ -6,7 +6,7 @@ from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError
 import user_database
 import user_input
-# from decorators import status_check
+
 query_type = ""
 item_list = []
 description = []

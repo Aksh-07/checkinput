@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def strings_to_matrix_calculation(str1):
     try:
         f, s = "", ""
