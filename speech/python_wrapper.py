@@ -1,10 +1,4 @@
-from cgi import print_arguments
-import enum
-from glob import glob
-from http import client
 from multiprocessing import current_process
-from os import stat
-from time import sleep
 from py4j.clientserver import ClientServer, JavaParameters, PythonParameters
 from py4j.java_gateway import JavaGateway,GatewayParameters, CallbackServerParameters
 import user_input as py_obj
@@ -12,7 +6,6 @@ from datetime import datetime
 from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError, SpeechInvalidArgumentError
 import logging
-import android_actions
 
 questions = ["can", "should", "would", "what", "when", "where", "how", "who", "whose", "why", "which", "isn't", "don't",
              "aren't", "won't", "must"]
