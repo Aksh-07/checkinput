@@ -1,5 +1,11 @@
-from distutils.text_file import TextFile
+from cgi import print_arguments
+import enum
+from glob import glob
+from http import client
 from multiprocessing import current_process
+from os import stat
+from time import sleep
+from py4j.clientserver import ClientServer, JavaParameters, PythonParameters
 from py4j.java_gateway import JavaGateway,GatewayParameters, CallbackServerParameters
 import user_input as py_obj
 from datetime import datetime
@@ -52,10 +58,6 @@ men_clothing = []
 optical_frames = []
 sports = []
 
-# if current_process().name!="MainProcess":
-gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
-# speech_process = gateway.jvm.py4j.examples.AppClass()
-speech_process = gateway.jvm.py4j.AppClass()
 
 
 class PythonSpeechWrapper:
@@ -67,16 +69,8 @@ class PythonSpeechWrapper:
     def __del__(self):
         pass
 
-    def string_to_num_array(self, string):
-        a = py_obj.ProcessUserInput.convert_strings_to_num_array(string)
-        print(a)
-
-    def extra_user_input(self, item, i_q):
-        a = android_actions.AndroidActions.additional_user_input(item)
-        i_q.put(a)
-
         
-    def get_user_input(self, data_type: str):
+    def get_user_input(self, data_type: str, input_data: str):
         """calls and compare the results from self.user_obj.run() with data_type and input_dta as argument
 
         Args:
@@ -92,17 +86,17 @@ class PythonSpeechWrapper:
         """
         try:
             start_time = datetime.now()
-            if self.user_obj.run(data_type) == 0:
+            if self.user_obj.run(data_type, input_data) == 0:
                 logging.error("Failed to start speech process")
-                return 1
+                return enums.SUCCESS.name
             logging.debug("Total execution time : %s " % (datetime.now() - start_time))
-            return 0
+            return enums.FAILURE.name
         except Exception as e:
             logging.error(f"{e}")
             raise SpeechProcessError(e)
 
     
-    def update_local_db(self, db_file: TextFile):
+    def update_local_db(self, db_file):
         """calls update_local_data_base() function from user_input module
 
         Args:
@@ -115,24 +109,33 @@ class PythonSpeechWrapper:
             str : result from update_local_data_base() function from user_input module
         """
         try:
+            self.user_obj.update_local_data_base(db_file)
             logging.info("Success")
-            return self.user_obj.update_local_data_base(db_file)
+            return enums.SUCCESS.name
         except Exception as e:
             logging.error(f"{e}")
             raise SpeechInvalidArgumentError(e)
 
     
-    def create_local_db_tables(self, table_names: list):
-        """calls create_local_data_base() from user_input module to create local database with given table names
+    def create_local_db_tables(self, db_file):
+        """create local data base after reading the given db file
 
         Args:
-            table_names (list): list of tables to be created in database
+            db_file (TextFile): .txt file to read data from
 
         Returns:
             str: result from function create_local_data_base() from user_input module
         """
-        logging.info("Success")
-        return self.user_obj.create_local_data_base(table_names)
+        try:
+            self.user_obj.read_input_db_file(db_file)
+            print(py_obj.table_names)
+            self.user_obj.create_local_data_base(py_obj.table_names)
+            logging.info("Success")
+            return enums.SUCCESS.name
+        except Exception as e:
+            logging.error(f"{e}")
+            raise SpeechInvalidArgumentError(e)
+
 
     
     def delete_local_db_rows(self, table_name: str, input_data: str):
@@ -145,87 +148,78 @@ class PythonSpeechWrapper:
         Returns:
             str: result from function delete_local_db_data() from user_input module
         """
-        logging.info("Success")
-        return self.user_obj.delete_local_db_data(table_name, input_data)
-
-
-    class Java:
-        implements = ['py4j.app_1']
-
-
-class PythonJavaBridge(object):
-    def __init__(self):
-        pass
-
-    def __del__(self):
-        pass
-
-    @staticmethod
-    def send_python_obj_java_call():
-        """Sends python object to the Java side.
-
-        Raises:
-            SpeechInvalidArgumentError: _description_
-
-        Returns:
-            str: SUCCESS if function works
-                 FALIURE if function fails
-        """
         try:
-            # "Sends" python object to the Java side.
-            result = speech_process.send_python_obj_to_java()
-            if result == 0:
-                logging.error("Failed to send python object to Java")
-                return enums.FAILURE.name
+            self.user_obj.delete_local_db_data(table_name, input_data)
             logging.info("Success")
             return enums.SUCCESS.name
         except Exception as e:
             logging.error(f"{e}")
             raise SpeechInvalidArgumentError(e)
 
+    class Java:
+        implements = ['speech.app_1']
+
+
+class PythonJavaBridge:
+
+
+    def __init__(self):
+        pass
+
+
+    def __del__(self):
+        pass
+
+    # @staticmethod
+    # def send_python_obj_java_call():
+    #     try:
+    #         _obj = PythonSpeechWrapper()
+    #         result = speech_process.send_python_obj_to_java(_obj)
+    #         if result == "Failed":
+    #             logging.error("Failed to send python object to Java")
+    #             return enums.FAILURE.name
+    #         return enums.SUCCESS.name
+    #     except Exception as e:
+    #         raise SpeechInvalidArgumentError(e)
+
+
     @staticmethod
-    def request_user_input_from_java(incomplete_input: list, que1):
+    def request_user_input_from_java(que1, input_need: list):
         """send incomplete_input to java side functions
-
         Args:
-            incomplete_input (list): list from validate_user_input() function from retail_actions module
-
+            que1: queue
+            input_need (list): list from validate_user_input() function from retail_actions or android_action module
         Raises:
             SpeechProcessError: _description_
-
         Returns:
             str: SUCCESS if java side functions return something
                  FAILURE if java side functions return nothing
         """
         try:
-            # obj = PythonSpeechWrapper()
-            result = speech_process.fill_data_for_speech_request(incomplete_input)
-            if result is None:
+            result = speech_process.fillDataForSpeechRequest(input_need)
+            if result=="Failed" or str==None:
                 logging.error("Failed to get requested input")
                 que1.put( enums.FAILURE.name)
             logging.info("Success")
-            que1.put(enums.SUCCESS.name)
+            que1.put(result)
         except Exception as e:
             logging.error(f"{e}")
             raise SpeechProcessError(e)
-
+    
     @staticmethod
     def update_new_words_to_analysis(new_user_words: list,que2):
         """send the new word to java functions for update and analysis
-
         Args:
             new_user_words (list): list of words and its related description from user
-
+            que2: queue
         Raises:
             SpeechProcessError: _description_
-
         Returns:
             str: SUCCESS if java side functions return something
                  FAILURE if java side functions return nothing
         """
         try:
-            obj = PythonSpeechWrapper()
-            result = speech_process.update_new_words_cloud(new_user_words, obj)
+            result = speech_process.updateNewWordsCloud(new_user_words)
             if result:
                 logging.error("Failed to get requested input")
                 que2.put( enums.FAILURE.name)
@@ -235,9 +229,10 @@ class PythonJavaBridge(object):
             logging.error(f"{e}")
             raise SpeechProcessError(e)
 
+
     @staticmethod
     def process_user_intention_actions(words: list):
-        """send words to java side functions
+        """send list containg information about user input to java side functions
 
         Args:
             words (list): list containing all information about the word user entered
@@ -246,17 +241,26 @@ class PythonJavaBridge(object):
             SpeechProcessError: _description_
         """
         try:
-            speech_process.process_user_actions(words)
+            global gateway, speech_process
+            speech_process.processUserActions(words)
             logging.info("Success")
         except Exception as e:
             logging.error(f"{e}")
             raise SpeechProcessError(e)
 
-    class Java:
-        implements = ['py4j.app_1']
+    
 
-# if __name__ == "__main__":
-#     start_time_ = datetime.now()
-#     obj = PythonSpeechWrapper()
-#     obj.get_user_input("text", "what is this for")
-#     print("Total execution time : %s " % (datetime.now() - start_time_))
+if current_process().name!="MainProcess":
+    gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
+    speech_process = gateway.jvm.speech.AppClass()
+
+
+if __name__ == "__main__":
+    obj = PythonSpeechWrapper()
+    client_server = ClientServer(java_parameters=JavaParameters(eager_load=True), python_parameters=PythonParameters(), python_server_entry_point=obj)
+    # gateway = JavaGateway(callback_server_parameters=CallbackServerParameters(), python_server_entry_point=obj)
+    print("Python server started")
+    
+    stop = input("Press S to stop")
+    if stop.lower() == "s":
+        client_server.close()

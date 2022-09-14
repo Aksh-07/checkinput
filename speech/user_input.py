@@ -6,6 +6,7 @@ import logging
 import json
 from datetime import datetime
 """
+from cmath import log
 from distutils.text_file import TextFile
 import logging
 from re import A
@@ -13,9 +14,9 @@ import android_actions as aa
 import retail_actions as ra
 from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError, SpeechInvalidArgumentError
-from multiprocessing import Process, Lock, Value, JoinableQueue
+from multiprocessing import Process, Lock, Value
 import multiprocessing
-from threading import Thread
+from threading import RLock, Thread
 import queue
 import numpy as np
 import user_database
@@ -125,6 +126,7 @@ supply_descriptions = """ CREATE TABLE IF NOT EXISTS supply_descriptions
 g_a_obj = None
 g_r_obj = None
 
+t_lock = RLock()
 lock = Lock()
 m_lock1 = Lock()
 m_lock2 = Lock()
@@ -181,6 +183,8 @@ class ProcessUserInput:
     def __del__(self):
         pass
 
+    # def g_py_obj(self):
+    #     return self.py_wrapper_obj()
     @staticmethod
     def py_wrapper_obj():
         """creates an object of PythonJavaBridge() class from python_wrapper module
@@ -191,32 +195,32 @@ class ProcessUserInput:
         logging.info("Success")
         return python_wrapper.PythonJavaBridge()
 
-    def request_user_for_input(self, input_need: list):
+
+    def request_user_for_input(self, input_need):
         """calls request_user_input_from_java from python_wrapper module for additional input from user
-
-        Args:
-            input_need (list): missing input required from user
-
         Raises:
             SpeechProcessError: _description_
-
         Returns:
             str: SUCCESS
             str: FAILURE
         """
         try:
-            que1=queue.Queue()
-            t1=Thread(target=self.g_py_obj.request_user_input_from_java,args=(input_need,que1))
+            que1 = queue.Queue()
+            t1=Thread(target=self.g_py_obj.request_user_input_from_java,args=(que1,input_need,))
             t1.start()
-            if que1.get():
-                # return enums.FAILURE.name
-                logging.info("Success") 
-                return enums.SUCCESS.name
+            t1.join()
+            second_input=que1.get()
+    
+            if second_input==enums.FAILURE.name:
+                logging.error("No user input") 
+                return enums.FAILURE.name
             logging.info("Success")
-            return enums.SUCCESS.name
+            return second_input
+        
         except Exception as e:
             logging.error(f"{e}")
             raise SpeechProcessError(e)
+    
     
     def update_user_input_to_cloud(self, input_need: list):
         """calls update_new_words_to_analysis from python_wrapper module
@@ -232,11 +236,12 @@ class ProcessUserInput:
             str: FAILURE
         """
         try:
-            que2=queue.Queue()
+            que2 = queue.Queue()
             t2=Thread(target=self.g_py_obj.update_new_words_to_analysis,args=(input_need,que2))
             t2.start()
-            if que2.get():
-                logging.info("Success")
+            t2.join()
+            if que2.get() == enums.FAILURE.name:
+                logging.error("Failure")
                 return enums.FAILURE.name
             logging.info("Success")
             return enums.SUCCESS.name
@@ -275,7 +280,7 @@ class ProcessUserInput:
             for str1 in lst:
                 arr = np.frombuffer(str1, dtype=np.uint8)
                 data_arr = np.array(arr)
-                word_lst = [np.sum(data_arr), data_arr.size, str1]
+                word_lst = [np.sum(data_arr).tolist(), data_arr.size, str1]
                 words_lst.append(word_lst)
             logging.info("Success")
             return words_lst, index
@@ -283,7 +288,7 @@ class ProcessUserInput:
             logging.error(f"{e}")
             raise SpeechProcessError(e)
 
-    def decode_user_input(self, _string: str, q_m1, q_m2):
+    def decode_user_input(self, _string: str):
         """convert user enterd string into list containg each words information using convert_strings_to_num_array() and then pass the information
         to decode_user_input_for_android_actions() and decode_user_input_for_retail_actions() of module android_action and retail_action simultaniously using threads
         for processing and give the results depending on processig
@@ -299,6 +304,7 @@ class ProcessUserInput:
             str: INVALID_INPUT
         """
         try:
+            
             if _string is None:
                 return enums.INVALID_INPUT.name
             else:
@@ -307,16 +313,16 @@ class ProcessUserInput:
             q_t = queue.Queue(2)
             g_a_obj = aa.AndroidActions(words)
             g_r_obj = ra.RetailActions(words)
-            and_t = Thread(target=g_a_obj.decode_user_input_for_android_actions, args=(index, q_t, q_m1, q_m2), daemon=True)
-            ret_t = Thread(target=g_r_obj.decode_user_input_for_retail_actions, args=(index, q_t), daemon=True)
+            and_t = Thread(target=g_a_obj.decode_user_input_for_android_actions, args=(index, q_t, t_lock), daemon=True)
+            ret_t = Thread(target=g_r_obj.decode_user_input_for_retail_actions, args=(index, q_t, t_lock), daemon=True)
             and_t.start()
             ret_t.start()
             and_t.join()
             ret_t.join()
             ret_and = q_t.get()
             ret_ret = q_t.get()
-            # print(f"ret and: {ret_and}")
-            # print(f"ret ret: {ret_ret}")
+            print(f"ret and: {ret_and}")
+            print(f"ret ret: {ret_ret}")
             if ret_and != enums.SUCCESS.name:
                 logging.debug("User intention is not a android action")
             elif ret_ret != enums.SUCCESS.name:
@@ -325,22 +331,28 @@ class ProcessUserInput:
                 logging.debug("User intention is a android action")
                 t3=Thread(target=self.g_py_obj.process_user_intention_actions,args=(g_a_obj.generate_android_action_request(),))
                 t3.start() 
-                # print("here")
+                t3.join()
                 return enums.SUCCESS.name
             elif ret_ret == enums.SUCCESS.name:
                 logging.debug("User intention is a retail action")
                 t4=Thread(target=self.g_py_obj.process_user_intention_actions,args=(g_r_obj.generate_retail_action_request(),))
                 t4.start()
+                t4.join()
                 return enums.SUCCESS.name
             else:
-                logging.debug("Unable to process user input")
-                # self.update_user_input_to_cloud(list(_string))
+                logging.error("Unable to process user input")
+                for i in range(0,len(words)):
+                    words[i][2]=words[i][2].decode("utf_8")                
+                self.update_user_input_to_cloud(words)
                 return enums.INVALID_INPUT.name
         except Exception as e:
             logging.error(f"{e}")
             raise SpeechProcessError(e)
+        # finally:
+        #     self.g_py_obj.Close_gateway()
+
     
-    def run(self, type_: str):
+    def run(self, type_: str, _input: str):
         """Multiprocessing tasks based upon `type` and then process the user input `_input`
 
         Args:
@@ -366,7 +378,7 @@ class ProcessUserInput:
                 return 1
             elif type_ == "video":
                 user_text = input("Enter something.\n")
-                vt = Process(target=self.start_security_decode, args=(user_text), name="Video")
+                vt = Process(target=self.start_security_decode, args=(user_text,), name="Video")
                 vt.start()
                 m_lock2.acquire()
                 vt.join()
@@ -374,33 +386,13 @@ class ProcessUserInput:
                 logging.info("Success")
                 return 1
             elif type_ == "text":
-                q_m1= JoinableQueue()
-                q_m2= JoinableQueue()
-                user_text = input("Enter something.\n")
-                tt = Process(target=self.decode_user_input, args=(user_text,q_m1,q_m2,), name="Text", daemon=True)
+                tt = Process(target=self.decode_user_input, args=(_input,), name="Text", daemon=True)
                 tt.start()
                 m_lock3.acquire()
-                # print("lock")
-                try:
-                    trigger = q_m1.get(timeout=1)
-                    if trigger:
-                        ins_text = input("Insufficent input, Enter again.\n")
-                        q_m2.put(ins_text)
-                        q_m2.task_done()
-                except queue.Empty:
-                    pass
-                finally:
-                    # print("not joined")
-                    # print("queue")
-                    # python_wrapper.gateway.close(close_callback_server_connections=True)
-                    # print(tt.is_alive())
-                    tt.join()
-                    # q_m1.join()
-                    # q_m2.join()
-                    m_lock3.release()
-                    # print("joined")
-                    logging.info("Success")
-                    return 1
+                tt.join()
+                m_lock3.release()
+                logging.info("Success")
+                return 1
             else:
                 for p in multiprocessing.active_children():
                     p.join()
@@ -439,7 +431,7 @@ class ProcessUserInput:
                         strings = word_lst[3].encode('utf_8')
                         arr = np.frombuffer(strings, dtype=np.uint8)
                         data_arr = np.array(arr)
-                        words_lst.append(np.sum(data_arr))
+                        words_lst.append(np.sum(data_arr).tolist())
                         words_lst.append(data_arr.size)
                         occurrence = sum(x.count(np.sum(data_arr)) for x in android_input_data)
                         occurrence1 = sum(x.count(np.sum(data_arr)) for x in android_input_data)
@@ -458,7 +450,7 @@ class ProcessUserInput:
                         strings = word_lst[3].encode('utf_8')
                         arr = np.frombuffer(strings, dtype=np.uint8)
                         data_arr = np.array(arr)
-                        words_lst.append(np.sum(data_arr))
+                        words_lst.append(np.sum(data_arr).tolist())
                         words_lst.append(data_arr.size)
                         occurrence = sum(x.count(np.sum(data_arr)) for x in business_input_data)
                         occurrence1 = sum(x.count(np.sum(data_arr)) for x in business_input_data)
@@ -479,7 +471,7 @@ class ProcessUserInput:
                         strings = word_lst[3].encode('utf_8')
                         arr = np.frombuffer(strings, dtype=np.uint8)
                         data_arr = np.array(arr)
-                        words_lst.append(np.sum(data_arr))
+                        words_lst.append(np.sum(data_arr).tolist())
                         words_lst.append(data_arr.size)
                         occurrence = sum(x.count(np.sum(data_arr)) for x in supplies_input_data)
                         occurrence1 = sum(x.count(np.sum(data_arr)) for x in supplies_input_data)
@@ -503,7 +495,7 @@ class ProcessUserInput:
             logging.error(f"{e}")
             raise SpeechInvalidArgumentError(e)
 
-    def update_local_data_base(self, db_file: TextFile):
+    def update_local_data_base(self, db_file):
         """calls self.read_input_db_file() and insert rows in local ctreated database with items stored in android_input_data, business_input_data, supplies_input_data
         depending on table_names and data_tag
 
@@ -518,9 +510,10 @@ class ProcessUserInput:
         """
         try:
             g_db_obj.create_connection()
+            global table_names, android_input_data, business_input_data, supplies_input_data, data_tag
+            table_names.clear(), android_input_data.clear(), business_input_data.clear(), supplies_input_data.clear(), data_tag.clear()
             if self.read_input_db_file(db_file) == enums.FATAL_ERROR.name:
                 return enums.FATAL_ERROR.name
-            global table_names, android_input_data, business_input_data, supplies_input_data, data_tag
             res = enums.FAILURE.name
             a = 0
             b = 0
@@ -572,7 +565,7 @@ class ProcessUserInput:
             g_db_obj.create_connection()
             keys, index = self.convert_strings_to_num_array(data_)
             res = enums.FAILURE.name
-            for i in range(0, len(keys)):
+            for i in range(0, index):
                 res = g_db_obj.delete_db_data(table_name, keys[i][0], keys[i][2])
                 if res != enums.SUCCESS.name:
                     logging.error("Failed to delete data {0} from table {1}".format(keys[i][2], keys[i][0]))

@@ -212,7 +212,7 @@ class ProcessDataBaseRequests:
                 logging.info("Success")
                 return enums.SUCCESS.name
             else:
-                logging.info("No matching row")
+                logging.error("No matching row")
                 return enums.DB_DELETE_ERROR.name
 
         except Error as e:

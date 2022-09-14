@@ -1,15 +1,12 @@
-from builtins import any as s_any, input as inp
+from builtins import any as s_any
 import logging
 import queue
-import string
-
 from numpy import array
 from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError
 import user_database
 import user_input
 # from decorators import status_check
-
 query_type = ""
 item_list = []
 description = []
@@ -30,6 +27,7 @@ class AndroidActions:
         self.words = []
         self.g_ui_obj = self.user_input_data_obj()
         g_db_obj.create_connection()
+        print(f"self.data: {self.data}")
 
     def __del__(self):
         pass
@@ -59,7 +57,7 @@ class AndroidActions:
         """
         for i in range(len(string_input)):
             if string_input[i] != compare_string[i]:
-                logging.info("Success")
+                logging.error("false")
                 return False
         logging.info("Success")
         return True
@@ -85,32 +83,32 @@ class AndroidActions:
         try:
             if index == 1:
                 rows = g_db_obj.fetch_db_data(table, self.data[0][0])
-                if rows is not None:
+                if rows:
                     for r in rows:
                         if r[1] == self.data[0][1]:
                             if self.compare_input_string(r[3], self.data[0][2]):
                                 self.words.append(r[3])
+                                logging.info("Success")
                                 return r[3]
-                    logging.info("Success")
-                    return None
                 else:
-                    logging.debug("This is of intention to " + query_type + " android application")
+                    logging.debug(f"Not in table {table}")
                     return None
-            for i in range(index):
-                rows = g_db_obj.fetch_db_data(table, self.data[i][0])
-                if rows is not None:
-                    for r in rows:
-                        if r[1] == self.data[i][1]:
-                            if self.compare_input_string(r[3], self.data[i][2]):
-                                self.words.append(r[3])
-            logging.info("Success")
-            return None
+            else:
+                for i in range(index):
+                    rows = g_db_obj.fetch_db_data(table, self.data[i][0])
+                    if rows:
+                        for r in rows:
+                            if r[1] == self.data[i][1]:
+                                if self.compare_input_string(r[3], self.data[i][2]):
+                                    self.words.append(r[3])
+                logging.info("Success")
+                return None
         except Exception as e:
             logging.error(f"{e}")
             raise SpeechProcessError(e)
 
     
-    def decode_user_input_for_android_actions(self, index: int, q_t: queue, q_m1, q_m2):
+    def decode_user_input_for_android_actions(self, index: int, q_t: queue, lock):
         """Decode anp Process user input after getting an array and index from user_input.convert_strings_to_num_array(strings) and put results in queue q_t which can be either
         SUCCESS or INVALID_INPUT depending on conditions in the function.
 
@@ -122,7 +120,8 @@ class AndroidActions:
             SpeechProcessError: _description_
         """
         try:
-        
+            lock.acquire()
+            global query_type, action_type, location, item_list
             if index == 1 and self.get_android_actions(self.get_android_db_words("Android_actions",
                                                                                 index)):
                 logging.debug("This is of intention to " + query_type + " android application")
@@ -137,41 +136,52 @@ class AndroidActions:
                     if self.check_android_command_status(index) == enums.INSUFFICIENT_INPUT.name:
                         validate_word = self.validate_android_action()
                         if validate_word is not None:
-                            i_q = queue.Queue()
-                            q_m1.put(1)
-                            q_m1.task_done()
-                            words = self.g_ui_obj.request_user_for_input(word)
+                            
+                            words = self.g_ui_obj.request_user_for_input(validate_word)
                             if words is enums.FAILURE.name:
                                 whole_input = [self.data[i][2] for i in range(index)]
                                 insuf_input = [x.decode("utf_8") for x in whole_input if x not in word]
                                 logging.error("Insufficient user input, could not process '{}'".format(insuf_input))
-                                self.g_ui_obj.update_user_input_to_cloud(insuf_input)
+                                y=self.g_ui_obj.update_user_input_to_cloud(insuf_input)
                                 q_t.put(enums.INVALID_INPUT.name)
                             else:
-                                q_m1.put(1)
-                                q_m1.task_done()
-                                ni = self.additional_user_input(q_m2.get())
+                                self.words = []
+                                query_type = ""
+                                action_type = ""
+                                item_list = []
+                            
+                                # self.get_android_db_words("Android_words", index)
+                                self.words = word
+                                ni = self.additional_user_input(words)
                                 if self.check_android_command_status(ni) == enums.INSUFFICIENT_INPUT.name:
                                     if self.validate_android_action() is not None:
+                                        logging.error("Invalid input")
                                         q_t.put(enums.INVALID_INPUT.name)
                                     else:
+                                        logging.info("Success")
                                         q_t.put(enums.SUCCESS.name)
                                 else:
                                     if self.validate_android_action() is not None:
+                                        logging.error("Invalid input")
                                         q_t.put(enums.INVALID_INPUT.name)
                                     else:
+                                        logging.info("Success")
                                         q_t.put(enums.SUCCESS.name)
                         else:
+                            logging.info("Success")
                             q_t.put(enums.SUCCESS.name)
                     else:
                         if self.validate_android_action() is not None:
+                            logging.error("INVALID_INPUT")
                             q_t.put(enums.INVALID_INPUT.name)
                         else:
+                            logging.info("Success")
                             q_t.put(enums.SUCCESS.name)    
-            logging.info("Success")   
         except Exception as e:
             logging.error(f"{e}")
             raise SpeechProcessError(e)
+        finally:
+            lock.release()
 
     
     def check_android_command_status(self, index):
@@ -190,9 +200,10 @@ class AndroidActions:
         """
         try:
             word_lst = self.words.copy()
+            print(f"word_list: cas{word_lst}")
             is_android_action = self.get_android_functions(word_lst)
             if is_android_action is not None:
-                global query_type, action_type, location
+                global query_type, action_type, location, item_list
                 try:
                     word_lst.remove(is_android_action)
                 except(ValueError, Exception):
@@ -209,6 +220,7 @@ class AndroidActions:
                     return enums.SUCCESS.name
                 else:
                     intention = self.get_intention_type(is_android_action, index)
+                    print(f"intention 1: {intention}")
                     if intention is not None and intention.decode('utf_8') == "order":
                         if is_android_action.decode('utf_8') == "past" or is_android_action.decode('utf_8') == "history":
                             query_type = "show"
@@ -226,22 +238,38 @@ class AndroidActions:
                         if self.get_location_for_weather_report(is_android_action, index) == enums.SUCCESS.name:
                             logging.debug("This is an " + action_type + " of intention to " + query_type + " " +
                                       item_list[0])
+                            logging.error("service not available")
                             return enums.SERVICE_NOT_AVAILABLE.name
-                        return enums.SUCCESS.name
+                        else:
+                            logging.info("Success")
+                            return enums.SUCCESS.name
                     elif intention is not None:
                         query_type = intention.decode('utf_8')
                         action_type = "android_action"
                         item_list.append(is_android_action.decode("utf_8"))
-                        logging.debug("This is an " + action_type + " of intention to " + query_type + " " +
-                                      item_list[0])
-                        return enums.SUCCESS.name
+                        print(f"cs: item: {item_list}")
+                        print(f"cs: query: {query_type}")
+
+                        if self.check_android_description_need:
+                            d = self.get_android_description(query_type, item_list)
+                            if d == enums.SUCCESS.name:
+                                logging.debug("This is an " + action_type + " of intention to " + query_type + " " +
+                                        item_list[0]+ " "+ description[0])
+                                return enums.SUCCESS.name
+                            else:
+                                logging.error("Insufficient input")
+                                return enums.INSUFFICIENT_INPUT.name
+                        else:
+                            logging.debug("This is an " + action_type + " of intention to " + query_type + " " +
+                                        item_list[0])
+                            return enums.SUCCESS.name
                     else:
                         item_list.append(is_android_action.decode("utf_8"))
                         action_type = "android_action"
                         logging.error("Insufficient input")
                         return enums.INSUFFICIENT_INPUT.name
             else:
-                logging.info("This is not a android action")
+                logging.error("This is not a android action")
                 return enums.INVALID_ANDROID_ACTION_TYPE.name
         except Exception as e:
             logging.error(f"{e}")
@@ -265,8 +293,9 @@ class AndroidActions:
             for word in self.data:
                 if s_any(word[2] in s for s in words):
                     logging.info("Success")
+                    print(f"get and func: {word[2]}")
                     return word[2]
-            logging.info("Success")
+            logging.error("none")
             return None
         except Exception as e:
             logging.error(f"{e}")
@@ -288,14 +317,14 @@ class AndroidActions:
         """
         try:
             if "order".encode("utf_8") == words or words is None:
-                logging.info("Success")
+                logging.error("None")
                 return None
             if words == self.data[0][2]:
                 global query_type
                 query_type = words.decode('utf_8')
                 logging.info("Success")
                 return words
-            logging.info("Success")
+            logging.error("failure")
             return None
         except Exception as e:
             logging.error(f"{e}")
@@ -360,8 +389,9 @@ class AndroidActions:
             for word in action_list:
                 if s_any(word in s for s in self.data):
                     logging.info("Success")
+                    print(f"intention type: {word}")
                     return word
-            logging.info("Success")
+            logging.error("failure: none")
             return None
         except Exception as e:
             logging.error(f"{e}")
@@ -407,7 +437,7 @@ class AndroidActions:
                 logging.info("Success")
                 return None
             else:
-                logging.info("Success")
+                logging.error(f"{word}")
                 return word
         except Exception as e:
             logging.error(f"{e}")
@@ -421,13 +451,13 @@ class AndroidActions:
             boolean: True or FALSE depending on conditions
         """
         if "photos" in item_list or "music" in item_list or "videos" in item_list:
-            logging.info("Success")
+            logging.info("description needed")
             return True
         elif query_type == "play":
-            logging.info("Success")
+            logging.info("description needed")
             return True
         else:
-            logging.info("Success")
+            logging.info("discription not needed")
             return False
 
     
@@ -436,4 +466,28 @@ class AndroidActions:
         self.data = new_word
         logging.info("Success")
         return new_index
+
+    def get_android_description(self, query, item):
+        words = []
+        for i in range(len(self.data)):
+            words.append(self.data[i][2])
+        words = [w.decode("utf_8") for w in words]
+        print(f"get_des: {words}")
+        # d = [x for x in words if x not in ([query] and item)]
+        print(1)
+        words.remove(query)
+        print(f"item: {item}")
+        for a in item:
+            print(f"2: {a}")
+            try:
+                words.remove(a)
+            except ValueError:
+                pass
+        print(f"d: {words}")
+        if words:
+            for item in words:
+                description.append(item)
+            return enums.SUCCESS.name
+        else:
+            return enums.FAILURE.name
 

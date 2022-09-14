@@ -6,6 +6,7 @@ def strings_to_matrix_calculation(str1):
         f, s = "", ""
         f_s, t_s, s_s, w0_s, w1_s, w2_s, w3_s = 0, 0, 0, 0, 0, 0, 0
         str_len = len(str1)
+        print(str_len)
         w = [None]*4
         i = 0
         if str_len > 1:
@@ -81,7 +82,6 @@ def strings_to_matrix_calculation(str1):
     except Exception as e:
         print(e)
 
-
 if __name__ == "__main__":
     """w_lst = strings_to_matrix_calculation("testerfor")
     print(w_lst)
@@ -92,6 +92,8 @@ if __name__ == "__main__":
     res = np.subtract(np.matrix(w_lst[2]), np.matrix(t_lst[2]))
     print(res)
     """
-    print(int(10/2))
-    print(int((10/2)/3))
+    # print(int(10/2))
+    # print(int((10/2)/3))
+    a = strings_to_matrix_calculation("1234567890")
+    print(a)
 
