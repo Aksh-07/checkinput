@@ -6,10 +6,8 @@ import logging
 import json
 from datetime import datetime
 """
-from cmath import log
 from distutils.text_file import TextFile
 import logging
-from re import A
 import android_actions as aa
 import retail_actions as ra
 from speech_errors import SpeechResult as enums
@@ -21,6 +19,7 @@ import queue
 import numpy as np
 import user_database
 import python_wrapper
+
 # from decorators import status_check
 
 """sample = [[1, 3, "some", 5], [0, 2, 4, 6], [0, 59, "thing", 2], [9, 5, "yes", 2], [9, 8, "Ko", 6]]
@@ -205,22 +204,21 @@ class ProcessUserInput:
         """
         try:
             que1 = queue.Queue()
-            t1=Thread(target=self.g_py_obj.request_user_input_from_java,args=(que1,input_need,))
+            t1 = Thread(target=self.g_py_obj.request_user_input_from_java, args=(que1, input_need,))
             t1.start()
             t1.join()
-            second_input=que1.get()
-    
-            if second_input==enums.FAILURE.name:
-                logging.error("No user input") 
+            second_input = que1.get()
+
+            if second_input == enums.FAILURE.name:
+                logging.error("No user input")
                 return enums.FAILURE.name
             logging.info("Success")
             return second_input
-        
+
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
-    
-    
+            raise SpeechProcessError("e")
+
     def update_user_input_to_cloud(self, input_need: list):
         """calls update_new_words_to_analysis from python_wrapper module
 
@@ -236,7 +234,7 @@ class ProcessUserInput:
         """
         try:
             que2 = queue.Queue()
-            t2=Thread(target=self.g_py_obj.update_new_words_to_analysis,args=(input_need,que2))
+            t2 = Thread(target=self.g_py_obj.update_new_words_to_analysis, args=(input_need, que2))
             t2.start()
             t2.join()
             if que2.get() == enums.FAILURE.name:
@@ -246,17 +244,15 @@ class ProcessUserInput:
             return enums.SUCCESS.name
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechInvalidArgumentError(e)
+            raise SpeechInvalidArgumentError("e")
 
-    
     def start_audio_decode(self, data):
         pass
 
-    
     def start_security_decode(self, data):
         pass
 
-    @staticmethod 
+    @staticmethod
     def convert_strings_to_num_array(strings: str):
         """convert string entered by user to a list with items sum of each word, length of word, and word itself
 
@@ -285,12 +281,14 @@ class ProcessUserInput:
             return words_lst, index
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
     def decode_user_input(self, _string: str):
-        """convert user enterd string into list containg each words information using convert_strings_to_num_array() and then pass the information
-        to decode_user_input_for_android_actions() and decode_user_input_for_retail_actions() of module android_action and retail_action simultaniously using threads
-        for processing and give the results depending on processig
+        """convert user entered string into list containing each words information using convert_strings_to_num_array()
+        and then pass the information
+        to decode_user_input_for_android_actions() and decode_user_input_for_retail_actions() of module android_action
+        and retail_action simultaneously using threads
+        for processing and give the results depending on processing
 
         Args:
             _string (str): user entered string
@@ -303,7 +301,7 @@ class ProcessUserInput:
             str: INVALID_INPUT
         """
         try:
-            
+
             if _string is None:
                 return enums.INVALID_INPUT.name
             else:
@@ -328,29 +326,30 @@ class ProcessUserInput:
                 logging.debug("User intention is not a retail action")
             if ret_and == enums.SUCCESS.name:
                 logging.debug("User intention is a android action")
-                t3=Thread(target=self.g_py_obj.process_user_intention_actions,args=(g_a_obj.generate_android_action_request(),))
-                t3.start() 
+                t3 = Thread(target=self.g_py_obj.process_user_intention_actions,
+                            args=(g_a_obj.generate_android_action_request(),))
+                t3.start()
                 t3.join()
                 return enums.SUCCESS.name
             elif ret_ret == enums.SUCCESS.name:
                 logging.debug("User intention is a retail action")
-                t4=Thread(target=self.g_py_obj.process_user_intention_actions,args=(g_r_obj.generate_retail_action_request(),))
+                t4 = Thread(target=self.g_py_obj.process_user_intention_actions,
+                            args=(g_r_obj.generate_retail_action_request(),))
                 t4.start()
                 t4.join()
                 return enums.SUCCESS.name
             else:
                 logging.error("Unable to process user input")
-                for i in range(0,len(words)):
-                    words[i][2]=words[i][2].decode("utf_8")                
+                for i in range(0, len(words)):
+                    words[i][2] = words[i][2].decode("utf_8")
                 self.update_user_input_to_cloud(words)
                 return enums.INVALID_INPUT.name
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
         # finally:
         #     self.g_py_obj.Close_gateway()
 
-    
     def run(self, type_: str, _input: str):
         """Multiprocessing tasks based upon `type` and then process the user input `_input`
 
@@ -399,16 +398,15 @@ class ProcessUserInput:
                 return 0
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechInvalidArgumentError(e)
-
+            raise SpeechInvalidArgumentError("e")
 
     @staticmethod
-    def read_input_db_file(db_file: TextFile):
+    def read_input_db_file(db_file):
         """open the given .txt file in argument, read it and stores information as list items in 
         table_names, android_input_data, business_input_data, supplies_input_data and data_tag
 
         Args:
-            db_file (TextFile): .txt file to read data from
+            db_file: .txt file to read data from
 
         Raises:
             SpeechInvalidArgumentError: _description_
@@ -492,10 +490,11 @@ class ProcessUserInput:
             return enums.SUCCESS.name
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechInvalidArgumentError(e)
+            raise SpeechInvalidArgumentError("e")
 
     def update_local_data_base(self, db_file):
-        """calls self.read_input_db_file() and insert rows in local ctreated database with items stored in android_input_data, business_input_data, supplies_input_data
+        """calls self.read_input_db_file() and insert rows in local created database with items stored in
+        android_input_data, business_input_data, supplies_input_data
         depending on table_names and data_tag
 
         Args:
@@ -505,12 +504,13 @@ class ProcessUserInput:
             SpeechProcessError: _description_
 
         Returns:
-            str: result from diffrent insert functions from user_database module
+            str: result from different insert functions from user_database module
         """
         try:
             g_db_obj.create_connection()
             global table_names, android_input_data, business_input_data, supplies_input_data, data_tag
-            table_names.clear(), android_input_data.clear(), business_input_data.clear(), supplies_input_data.clear(), data_tag.clear()
+            table_names.clear(), android_input_data.clear(),\
+                business_input_data.clear(), supplies_input_data.clear(), data_tag.clear()
             if self.read_input_db_file(db_file) == enums.FATAL_ERROR.name:
                 return enums.FATAL_ERROR.name
             res = enums.FAILURE.name
@@ -544,9 +544,8 @@ class ProcessUserInput:
             return res
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def delete_local_db_data(self, table_name: str, data_: str):
         """delete row from local database from given table_name by matching row with given data_
 
@@ -572,7 +571,7 @@ class ProcessUserInput:
             return res
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
     @staticmethod
     def create_local_data_base(table_name: list):
@@ -598,5 +597,4 @@ class ProcessUserInput:
             return res
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
-
+            raise SpeechProcessError("e")

@@ -1,12 +1,13 @@
 import numpy as np
 
+
 def strings_to_matrix_calculation(str1):
     try:
         f, s = "", ""
         f_s, t_s, s_s, w0_s, w1_s, w2_s, w3_s = 0, 0, 0, 0, 0, 0, 0
         str_len = len(str1)
         print(str_len)
-        w = [None]*4
+        w = [None] * 4
         i = 0
         if str_len > 1:
             f, s = str1[0:int(len(str1) // 2)], str1[int(len(str1) // 2):]
@@ -14,18 +15,20 @@ def strings_to_matrix_calculation(str1):
                 f, w[0] = f[0:int(len(f) // 2)], f[int(len(f) // 2):]
                 i = i + 1
             elif int(len(f)) > 2:
-                f, w[i], w[i + 1] = f[0:int(len(f) // 3)], f[int(len(f)//3): int(2 * len(f) // 3)], f[int(2 * (len(f) //
+                f, w[i], w[i + 1] = f[0:int(len(f) // 3)], f[int(len(f) // 3): int(2 * len(f) // 3)], f[
+                                                                                                      int(2 * (len(f) //
                                                                                                                3)):]
                 i = i + 2
             elif f and int(len(f)) == 1:
                 pass
             if 1 < int(len(s)) < 3:
                 s, w[i] = s[0:int(len(s) // 2)], s[int((len(s) // 2)):]
-                i = i + 1
+                i += 1
             elif len(s) > 2:
-                s, w[i], w[i + 1] = s[0:int(len(s) // 3)], s[int(len(s)//3): int(2 * len(s) // 3)], s[int(2 * (len(s) //
+                s, w[i], w[i + 1] = s[0:int(len(s) // 3)], s[int(len(s) // 3): int(2 * len(s) // 3)], s[
+                                                                                                      int(2 * (len(s) //
                                                                                                                3)):]
-                i = i + 2
+                i += 2
             elif s and int(len(s)) == 1:
                 pass
         if str_len > 1:
@@ -81,10 +84,11 @@ def strings_to_matrix_calculation(str1):
     except Exception as e:
         print(e)
 
+
 if __name__ == "__main__":
-    """w_lst = strings_to_matrix_calculation("testerfor")
+    """w_lst = strings_to_matrix_calculation("tester for")
     print(w_lst)
-    t_lst = strings_to_matrix_calculation("tasterfor")
+    t_lst = strings_to_matrix_calculation("taster for")
     print(w_lst[2])
     #   print(np.matrix(w_lst[2]))
     #   print(np.matrix(t_lst[2]))
@@ -95,4 +99,3 @@ if __name__ == "__main__":
     # print(int((10/2)/3))
     a = strings_to_matrix_calculation("1234567890")
     print(a)
-

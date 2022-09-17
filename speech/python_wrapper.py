@@ -1,18 +1,11 @@
-from cgi import print_arguments
-import enum
-from glob import glob
-from http import client
 from multiprocessing import current_process
-from os import stat
-from time import sleep
 from py4j.clientserver import ClientServer, JavaParameters, PythonParameters
-from py4j.java_gateway import JavaGateway,GatewayParameters, CallbackServerParameters
+from py4j.java_gateway import JavaGateway, GatewayParameters
 import user_input as py_obj
 from datetime import datetime
 from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError, SpeechInvalidArgumentError
 import logging
-import android_actions
 
 questions = ["can", "should", "would", "what", "when", "where", "how", "who", "whose", "why", "which", "isn't", "don't",
              "aren't", "won't", "must"]
@@ -23,12 +16,12 @@ actions = ["show", "order", "get", "add", "cancel", "decline", "dismiss", "stop"
            "down", "change", "save", "repeat", "shuffle", "seek", "enable", "open", "ask", "accept", "delivering",
            "back", "forward", "connect"]
 android_word = ["photo", "video", "memories", "memory", "history", "past", "weather", "music", "setting", "calendar",
-                 "weather", "volume", "display", "wallpaper", "screen", "saver", "profile", "picture", "notification",
-                 "promotion", "date", "time", "year", "month", "temperature", "network", "wifi", "bluetooth",
-                 "seconds", "minutes", "hours", "favorites", "album", "silent", "mode", "brightness", "preference",
-                 "security", "camera", "cam", "camera1", "cam1", "camera2", "cam2", "camera3", "cam3", "camera4",
-                 "cam4", "security", "card", "credit", "debit", "pin", "cvv", "address", "apartment", "home",
-                 "emergency"]
+                "weather", "volume", "display", "wallpaper", "screen", "saver", "profile", "picture", "notification",
+                "promotion", "date", "time", "year", "month", "temperature", "network", "wifi", "bluetooth",
+                "seconds", "minutes", "hours", "favorites", "album", "silent", "mode", "brightness", "preference",
+                "security", "camera", "cam", "camera1", "cam1", "camera2", "cam2", "camera3", "cam3", "camera4",
+                "cam4", "security", "card", "credit", "debit", "pin", "cvv", "address", "apartment", "home",
+                "emergency"]
 
 retailers = ["costco", "kfc", "bjs", "target"]
 ret_actions = ["order", "get", "add", "cancel", "stop", "take", "over"]
@@ -58,7 +51,6 @@ optical_frames = []
 sports = []
 
 
-
 class PythonSpeechWrapper:
     def __init__(self):
         """creates an object of ProcessUserInput() class from user_input module
@@ -68,7 +60,6 @@ class PythonSpeechWrapper:
     def __del__(self):
         pass
 
-        
     def get_user_input(self, data_type: str, input_data: str):
         """calls and compare the results from self.user_obj.run() with data_type and input_dta as argument
 
@@ -92,9 +83,8 @@ class PythonSpeechWrapper:
             return enums.FAILURE.name
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def update_local_db(self, db_file):
         """calls update_local_data_base() function from user_input module
 
@@ -113,9 +103,8 @@ class PythonSpeechWrapper:
             return enums.SUCCESS.name
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechInvalidArgumentError(e)
+            raise SpeechInvalidArgumentError("e")
 
-    
     def create_local_db_tables(self, db_file):
         """create local data base after reading the given db file
 
@@ -133,10 +122,8 @@ class PythonSpeechWrapper:
             return enums.SUCCESS.name
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechInvalidArgumentError(e)
+            raise SpeechInvalidArgumentError("e")
 
-
-    
     def delete_local_db_rows(self, table_name: str, input_data: str):
         """calls delete_local_db_data() from user_input module to delete row with given input_data from given table_name
 
@@ -153,7 +140,7 @@ class PythonSpeechWrapper:
             return enums.SUCCESS.name
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechInvalidArgumentError(e)
+            raise SpeechInvalidArgumentError("e")
 
     class Java:
         implements = ['speech.app_1']
@@ -161,14 +148,11 @@ class PythonSpeechWrapper:
 
 class PythonJavaBridge:
 
-
     def __init__(self):
         pass
 
-
     def __del__(self):
         pass
-
 
     @staticmethod
     def request_user_input_from_java(que1, input_need: list):
@@ -184,17 +168,17 @@ class PythonJavaBridge:
         """
         try:
             result = speech_process.fillDataForSpeechRequest(input_need)
-            if result=="Failed" or str==None:
+            if result == "Failed" or not str:
                 logging.error("Failed to get requested input")
-                que1.put( enums.FAILURE.name)
+                que1.put(enums.FAILURE.name)
             logging.info("Success")
             que1.put(result)
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
-    
+            raise SpeechProcessError("e")
+
     @staticmethod
-    def update_new_words_to_analysis(new_user_words: list,que2):
+    def update_new_words_to_analysis(new_user_words: list, que2):
         """send the new word to java functions for update and analysis
         Args:
             new_user_words (list): list of words and its related description from user
@@ -209,17 +193,16 @@ class PythonJavaBridge:
             result = speech_process.updateNewWordsCloud(new_user_words)
             if result:
                 logging.error("Failed to get requested input")
-                que2.put( enums.FAILURE.name)
+                que2.put(enums.FAILURE.name)
             logging.info("Success")
             que2.put(enums.SUCCESS.name)
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
-
+            raise SpeechProcessError("e")
 
     @staticmethod
     def process_user_intention_actions(words: list):
-        """send list containg information about user input to java side functions
+        """send list containing information about user input to java side functions
 
         Args:
             words (list): list containing all information about the word user entered
@@ -228,26 +211,24 @@ class PythonJavaBridge:
             SpeechProcessError: _description_
         """
         try:
-            global gateway, speech_process
             speech_process.processUserActions(words)
             logging.info("Success")
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
 
-if current_process().name!="MainProcess":
+if current_process().name != "MainProcess":
     gateway = JavaGateway(gateway_parameters=GatewayParameters(auto_convert=True))
     speech_process = gateway.jvm.speech.AppClass()
 
-
 if __name__ == "__main__":
     obj = PythonSpeechWrapper()
-    client_server = ClientServer(java_parameters=JavaParameters(eager_load=True), python_parameters=PythonParameters(), python_server_entry_point=obj)
+    client_server = ClientServer(java_parameters=JavaParameters(eager_load=True), python_parameters=PythonParameters(),
+                                 python_server_entry_point=obj)
     # gateway = JavaGateway(callback_server_parameters=CallbackServerParameters(), python_server_entry_point=obj)
     print("Python server started")
-    
+
     stop = input("Press S to stop")
     if stop.lower() == "s":
         client_server.close()

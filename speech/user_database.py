@@ -2,7 +2,6 @@ import sqlite3
 from sqlite3 import Error
 from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError
-import numpy as np
 import logging
 
 database = r"user_tasks.db"
@@ -17,7 +16,6 @@ class ProcessDataBaseRequests:
     def __del__(self):
         pass
 
-    
     def create_connection(self):
         """if connection during initiation is none connect to the given database.
 
@@ -31,9 +29,8 @@ class ProcessDataBaseRequests:
                 return enums.SUCCESS.name
         except Error as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def create_table(self, create_table_sql: str):
         """create table in database
 
@@ -54,9 +51,8 @@ class ProcessDataBaseRequests:
             return enums.SUCCESS.name
         except Error as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def delete_table(self, table_name: str):
         """Delete a table from database
 
@@ -71,18 +67,17 @@ class ProcessDataBaseRequests:
         """
         try:
             c = self.conn.cursor()
-            qstr = "DROP TABLE {0}".format(table_name)
-            c.execute(qstr)
+            q_str = "DROP TABLE {0}".format(table_name)
+            c.execute(q_str)
             self.conn.commit()
             logging.info("Success")
             return enums.SUCCESS.name
         except Error as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def insert_business_supplies_data(self, table_name: str, input_data: list):
-        """to insert rows into tables related to bussiness
+        """to insert rows into tables related to business
 
         Args:
             table_name (str): name of table
@@ -96,16 +91,15 @@ class ProcessDataBaseRequests:
         """
         try:
             c = self.conn.cursor()
-            qstr = "INSERT INTO {0} VALUES (?,?,?,?,?,?,?)".format(table_name)
-            c.execute(qstr, input_data)
+            q_str = "INSERT INTO {0} VALUES (?,?,?,?,?,?,?)".format(table_name)
+            c.execute(q_str, input_data)
             self.conn.commit()
             logging.info("Success")
             return enums.SUCCESS.name
         except Error as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def insert_supplies_data(self, table_name: str, input_data: list):
         """to insert rows into tables related to supplies
 
@@ -121,18 +115,17 @@ class ProcessDataBaseRequests:
         """
         try:
             c = self.conn.cursor()
-            qstr = "INSERT INTO {0} VALUES (?,?,?,?,?,?,?,?)".format(table_name)
-            c.execute(qstr, input_data)
+            q_str = "INSERT INTO {0} VALUES (?,?,?,?,?,?,?,?)".format(table_name)
+            c.execute(q_str, input_data)
             self.conn.commit()
             logging.info("Success")
             return enums.SUCCESS.name
         except Error as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def insert_android_data(self, table_name: str, input_data: list):
-        """to insert rows into tables frelated to android functions
+        """to insert rows into tables related to android functions
 
         Args:
             table_name (str): name of table
@@ -146,22 +139,21 @@ class ProcessDataBaseRequests:
         """
         try:
             c = self.conn.cursor()
-            qstr = "INSERT INTO {0} VALUES (?,?,?,?,?)".format(table_name)
-            c.execute(qstr, input_data)
+            q_str = "INSERT INTO {0} VALUES (?,?,?,?,?)".format(table_name)
+            c.execute(q_str, input_data)
             self.conn.commit()
             logging.info("Success")
             return enums.SUCCESS.name
         except Error as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def fetch_db_data(self, table_name: str, input_key: int):
         """fetch rows from given table_name where size matches input key
 
         Args:
             table_name (str): name of table
-            input_key (int): size\weight of word to fetch
+            input_key (int): size of word to fetch
 
         Raises:
             SpeechProcessError: _description_
@@ -171,22 +163,21 @@ class ProcessDataBaseRequests:
         """
         try:
             c = self.conn.cursor()
-            qstr = "SELECT * FROM {0} WHERE Size = ?".format(table_name)
-            c.execute(qstr, (input_key,))
+            q_str = "SELECT * FROM {0} WHERE Size = ?".format(table_name)
+            c.execute(q_str, (input_key,))
             records = c.fetchall()
             logging.info("Success")
             return records
         except Error as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def delete_db_data(self, table_name: str, input_key: int, input_data: bytes):
         """search for the row with matching input_key and input_data then delete the row if found.
 
         Args:
             table_name (str): name of table
-            input_key (int): size\weight of word
+            input_key (int): size of word
             input_data (bytes): bytes string of word from convert_strings_to_num_array()
 
         Raises:
@@ -205,8 +196,8 @@ class ProcessDataBaseRequests:
                         key_value = row[3]
 
                 c = self.conn.cursor()
-                qstr = "DELETE FROM {0} WHERE Name = ?".format(table_name)
-                c.execute(qstr, (key_value,))
+                q_str = "DELETE FROM {0} WHERE Name = ?".format(table_name)
+                c.execute(q_str, (key_value,))
                 self.conn.commit()
                 logging.info("Success")
                 return enums.SUCCESS.name
@@ -216,4 +207,4 @@ class ProcessDataBaseRequests:
 
         except Error as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")

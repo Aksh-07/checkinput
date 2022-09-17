@@ -16,7 +16,8 @@
 #     if "user_tasks.db" not in os.listdir(r"C:\Users\kc\website\checkinput"):
 #         read_file = user_obj.read_input_db_file("speech/data.txt")
 #         obj.create_local_db_tables(table_names=user_input.table_names)
-#         user_input.table_names.clear(), user_input.android_input_data.clear(), user_input.business_input_data.clear(), user_input.supplies_input_data.clear(), user_input.data_tag.clear()
+#         user_input.table_names.clear(), user_input.android_input_data.clear(),
+#         user_input.business_input_data.clear(), user_input.supplies_input_data.clear(), user_input.data_tag.clear()
 
 #     obj.update_local_db("speech/data.txt")
 #     # user_text = input("enter something\n")
@@ -30,5 +31,6 @@
 
 
 # obj = python_wrapper.PythonSpeechWrapper()
-# client_server = ClientServer(java_parameters=JavaParameters(eager_load=True), python_parameters=PythonParameters(), python_server_entry_point=obj)
+# client_server = ClientServer(java_parameters=JavaParameters(eager_load=True),
+# python_parameters=PythonParameters(), python_server_entry_point=obj)
 # print("Python server started")

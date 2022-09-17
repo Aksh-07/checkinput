@@ -6,8 +6,6 @@ import logging
 import json
 from datetime import datetime"""
 import logging
-from operator import index
-import queue
 from numpy import array
 from speech_errors import SpeechResult as enums
 from speech_errors import SpeechProcessError, SpeechInvalidArgumentError
@@ -29,10 +27,12 @@ location = "hillsboro"
 
 g_db_obj = user_database.ProcessDataBaseRequests()
 
+
 class RetailActions:
     def __init__(self, text_input: array):
         """stores parameter text_input into self.data, creates an empty list with name self.words,
-        initiates self.user_input_data_obj() with variable name self.g_ui_obj, and creates an object of user_database.creates_connection()
+        initiates self.user_input_data_obj() with variable name self.g_ui_obj, and creates an object of
+        user_database.creates_connection()
 
         Args:
             text_input (array): array from function convert_strings_to_num_array(strings)
@@ -57,7 +57,7 @@ class RetailActions:
 
     @staticmethod
     def compare_input_string(string_input: str, compare_string: str):
-        """compare the user input string with the one fetched from databse
+        """compare the user input string with the one fetched from database
 
         Args:
             string_input (str): string fetched from database.
@@ -74,9 +74,9 @@ class RetailActions:
         logging.info("Success")
         return True
 
-    
     def get_retail_db_words(self, table: str, index: int):
-        """Fetch all the rows from given table with the given index then find the one that match the user input and stores 
+        """Fetch all the rows from given table with the given index then find the one that match the user input and
+        stores
         the string in self.words
 
 
@@ -89,7 +89,8 @@ class RetailActions:
             SpeechProcessError: _description_
 
         Returns:
-            bytes: r[3] if there is only one word in user input, 4th item of row is fetched from database which is a string converted into bytes.
+            bytes: r[3] if there is only one word in user input, 4th item of row is fetched from database which is a
+            string converted into bytes.
             NONE: if there is no matching data found in database or there are more than one words in user input.
         """
         try:
@@ -117,9 +118,8 @@ class RetailActions:
                 return None
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def validate_user_input(self, index: int):
         """validate user input by checking self.is_input_incomplete()
 
@@ -140,7 +140,6 @@ class RetailActions:
         logging.info("success")
         return None
 
-    
     def is_input_incomplete(self, index: int):
         """check and update details like query_type, business_name, item_list to see if input is complete
 
@@ -157,7 +156,7 @@ class RetailActions:
             logging.error("query_type is not available")
             result.append("query_type")
         if not business_name:
-            logging.error("bussiness_name is not available")
+            logging.error("business_name is not available")
             result.append("business_name")
         if not item_list:
             logging.error("item_list not available")
@@ -175,7 +174,6 @@ class RetailActions:
         logging.info("Success")
         return None
 
-    
     def check_add_ons_need(self, index: int):
         """check for add ons from supply_add_ons table
 
@@ -199,9 +197,8 @@ class RetailActions:
             return None
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def check_description_need(self, index: int):
         """check for description from supply_descriptions table
 
@@ -225,11 +222,12 @@ class RetailActions:
             return None
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
     @staticmethod
     def generate_retail_action_request():
-        """creates a list of dictionaries with keys `query_type`, `item_list`, `description`, `business_name`, `add_ons` and its corresponding values 
+        """creates a list of dictionaries with keys `query_type`, `item_list`, `description`, `business_name`, `add_ons`
+        and its corresponding values
 
         Returns:
             list: a list of dictionaries items with key value pairs
@@ -240,12 +238,12 @@ class RetailActions:
         logging.info("Success")
         return lis
 
-    
     def ret_get_more_input(self, incomplete: list, index):
         """calls request_user_for_input() and update_user_input_to_cloud() from user_input module
 
         Args:
             incomplete (list): list with word and its descriptions
+            index: length of the array created by convert_strings_to_num_array(strings)
 
         Raises:
             SpeechInvalidArgumentError: _description_
@@ -264,16 +262,15 @@ class RetailActions:
                 whole_input = [self.data[i][2] for i in range(index)]
                 insuf_input = [x.decode("utf_8") for x in whole_input if x not in self.words]
                 logging.error("Insufficient user input, could not process '{}'".format(insuf_input))
-                y=self.g_ui_obj.update_user_input_to_cloud(insuf_input)
+                self.g_ui_obj.update_user_input_to_cloud(insuf_input)
                 return enums.FAILURE.name
             else:
                 logging.info("Success")
                 return words
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechInvalidArgumentError(e)
+            raise SpeechInvalidArgumentError("e")
 
-    
     def get_business_name(self, index: int):
         """search businesses table for matching row and return business name in bytes string
 
@@ -300,9 +297,8 @@ class RetailActions:
                     logging.debug("Notify user and get confirmation")
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def get_business_action(self, index: int):
         """check and return the matching business action from business_Actions table
 
@@ -326,9 +322,8 @@ class RetailActions:
                 return self.words[0]
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def get_business_supplies_list(self, index: int):
         """check given business's table for supplies or available_supplies table for matching supplies
 
@@ -345,7 +340,7 @@ class RetailActions:
         try:
             global business_name
             if business_name is not None:
-                self.get_retail_db_words(business_name.decode("utf_8")+"_supplies", index)
+                self.get_retail_db_words(business_name.decode("utf_8") + "_supplies", index)
             else:
                 self.get_retail_db_words("Available_supplies", index)
             if not self.words:
@@ -356,11 +351,10 @@ class RetailActions:
                 return self.words
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
     def check_retail_command_status(self, index: int):
-        """check for variables bussiness_name, item_list, query_type, description and add_ons and then updates them
+        """check for variables business_name, item_list, query_type, description and add_ons and then updates them
 
         Args:
             index (int): length of the array created by convert_strings_to_num_array(strings)
@@ -405,16 +399,16 @@ class RetailActions:
                 return enums.FAILURE.name
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
-    
-    def decode_user_input_for_retail_actions(self, index: int, q_t: queue, lock):
-        """Decode and Process user input after getting an array and index from user_input.convert_strings_to_num_array(strings) and put results in queue q_t which can be either
+    def decode_user_input_for_retail_actions(self, index: int, q_t, lock):
+        """Decode and Process user input after getting an array and index from
+        user_input.convert_strings_to_num_array(strings) and put results in queue q_t which can be either
         SUCCESS or INVALID_INPUT depending on conditions in the function.
 
         Args:
             index (int): length of the array created by convert_strings_to_num_array(strings)
-            q_t (queue): object created from queue.Queue() class
+            q_t: object created from queue.Queue() class
             lock(lock): threading RLock object
 
         Raises:
@@ -467,14 +461,13 @@ class RetailActions:
                         else:
                             logging.error("Failure")
                             q_t.put(enums.FAILURE.name)
-                        
-                        
+
                     #     logging.error("Failure")
                     #     q_t.put(enums.FAILURE.name)
                     # words = self.validate_user_input(index)
                     # if words is not None:
                     #     if self.ret_get_more_input(words) == enums.SUCCESS.name:
-                            
+
                     #         if self.check_retail_command_status(index) == enums.SUCCESS.name:
                     #             if self.validate_user_input(index) is None:
                     #                 logging.info("Success")
@@ -493,11 +486,10 @@ class RetailActions:
                     q_t.put(enums.FAILURE.name)
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
         finally:
             lock.release()
 
-    
     def get_retail_actions(self, words: bytes):
         """check for retail_action and update query_type
 
@@ -521,7 +513,7 @@ class RetailActions:
             return None
         except Exception as e:
             logging.error(f"{e}")
-            raise SpeechProcessError(e)
+            raise SpeechProcessError("e")
 
     def additional_user_input(self, user_text: str):
         """get input from java side and updates self.data with new data and return updated index

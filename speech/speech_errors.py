@@ -23,6 +23,7 @@ class SpeechError(Exception):
 class SpeechProcessError(SpeechError):
     pass
 
+
 class SpeechTimeOutError(SpeechError):
     pass
 
@@ -32,10 +33,10 @@ class SpeechInvalidArgumentError(SpeechError):
 
 
 class SpeechResult(enum.Enum):
-    """symbolic names associated with unique values to represent diffrent errors in the program while running
+    """symbolic names associated with unique values to represent different errors in the program while running
 
     Args:
-        enum: emumeration class
+        enum: enumeration class
 
     Raises:
         SpeechInvalidArgumentError: _description_
